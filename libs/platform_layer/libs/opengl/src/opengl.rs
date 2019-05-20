@@ -44,7 +44,7 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
     )?;
     unsafe { window.make_current()? };
 
-    let font_bytes: &[u8] = include_bytes!("./fonts/FantasqueSansMono-Regular.ttf");
+    let font_bytes: &[u8] = include_bytes!("./fonts/FiraCode-Retina-plus-CR-and-LF.ttf");
     let font: Font<'static> = Font::from_bytes(font_bytes)?;
     let font_size: f32 = 11.0;
     let scroll_multiplier: f32 = 16.0;
@@ -275,7 +275,17 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
 
             perf_viz::record_guard!("glyph_brush.queue");
             glyph_brush.queue(Section {
-                text: chars,
+                text: &chars
+                    .chars()
+                    .map(|c| {
+                        // map unprinatbles to symbols for themselves
+                        if c < 0x20 as char {
+                            std::char::from_u32(c as u32 | 0x2400u32).unwrap_or(c)
+                        } else {
+                            c
+                        }
+                    })
+                    .collect::<String>(),
                 scale,
                 screen_position,
                 bounds,
