@@ -46,10 +46,14 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
 
     let font_bytes: &[u8] = include_bytes!("./fonts/FiraCode-Retina-plus-CR-and-LF.ttf");
     let font: Font<'static> = Font::from_bytes(font_bytes)?;
-    let font_size: f32 = 11.0;
+    let text_size: f32 = 600.0;
+    let status_size: f32 = 22.0;
     let scroll_multiplier: f32 = 16.0;
 
-    let scale = rusttype::Scale::uniform((font_size * window.get_hidpi_factor() as f32).round());
+    let text_scale =
+        rusttype::Scale::uniform((text_size * window.get_hidpi_factor() as f32).round());
+    let status_scale =
+        rusttype::Scale::uniform((status_size * window.get_hidpi_factor() as f32).round());
 
     let mut glyph_brush = GlyphBrushBuilder::using_font(font.clone())
         // Leaving this at the default of 0.1 makes the cache get cleared too often.
@@ -71,12 +75,12 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
         w: {
             // We currently assume the font is monospaced.
             let em_space_char = '\u{2003}';
-            let h_metrics = font.glyph(em_space_char).scaled(scale).h_metrics();
+            let h_metrics = font.glyph(em_space_char).scaled(text_scale).h_metrics();
 
             h_metrics.advance_width
         },
         h: {
-            let v_metrics = font.v_metrics(scale);
+            let v_metrics = font.v_metrics(text_scale);
 
             v_metrics.ascent + -v_metrics.descent + v_metrics.line_gap
         },
@@ -286,16 +290,15 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                         }
                     })
                     .collect::<String>(),
-                scale,
+                scale: if let BufferViewKind::StatusLine = kind {
+                    status_scale
+                } else {
+                    text_scale
+                },
                 screen_position,
                 bounds,
                 color,
-                layout: match kind {
-                    BufferViewKind::Edit => Layout::default_wrap(),
-                    BufferViewKind::StatusLine | BufferViewKind::Cursor => {
-                        Layout::default_single_line()
-                    }
-                },
+                layout: Layout::default_single_line(),
                 z: match kind {
                     BufferViewKind::Edit => gl_layer::EDIT_Z,
                     BufferViewKind::Cursor => gl_layer::CURSOR_Z,
