@@ -71,25 +71,33 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
         .ok_or("get_inner_size = None")?
         .to_physical(window.get_hidpi_factor());
 
-    let char_dim = CharDim {
-        w: {
-            // We currently assume the font is monospaced.
-            let em_space_char = '\u{2003}';
-            let h_metrics = font.glyph(em_space_char).scaled(text_scale).h_metrics();
+    macro_rules! get_char_dim {
+        ($scale:ident) => {
+            CharDim {
+                w: {
+                    // We currently assume the font is monospaced.
+                    let em_space_char = '\u{2003}';
+                    let h_metrics = font.glyph(em_space_char).scaled($scale).h_metrics();
 
-            h_metrics.advance_width
-        },
-        h: {
-            let v_metrics = font.v_metrics(text_scale);
+                    h_metrics.advance_width
+                },
+                h: {
+                    let v_metrics = font.v_metrics($scale);
 
-            v_metrics.ascent + -v_metrics.descent + v_metrics.line_gap
-        },
-    };
+                    v_metrics.ascent + -v_metrics.descent + v_metrics.line_gap
+                },
+            }
+        };
+    }
+
+    let text_char_dim = get_char_dim!(text_scale);
+    let status_char_dim = get_char_dim!(status_scale);
 
     let (mut view, mut _cmd) = update_and_render(Input::SetSizes(Sizes! {
         screen_w: dimensions.width as f32,
         screen_h: dimensions.height as f32,
-        char_dim: char_dim,
+        text_char_dim: text_char_dim,
+        status_char_dim: status_char_dim,
     }));
 
     let (mut mouse_x, mut mouse_y) = (0.0, 0.0);
@@ -139,7 +147,8 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                             call_u_and_r!(Input::SetSizes(Sizes! {
                                 screen_w: dimensions.width as f32,
                                 screen_h: dimensions.height as f32,
-                                char_dim: None,
+                                text_char_dim: None,
+                                status_char_dim: None,
                             }));
                             gl_layer::set_dimensions(dimensions.width as _, dimensions.height as _);
 
@@ -311,6 +320,8 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
 
         let width = dimensions.width as u32;
         let height = dimensions.height as f32;
+
+        if_changed::println!("{:?}", status_line_position);
 
         gl_layer::render(
             &mut gl_state,

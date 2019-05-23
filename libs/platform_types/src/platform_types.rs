@@ -211,7 +211,8 @@ pub type UpdateAndRender = fn(Input) -> UpdateAndRenderOutput;
 pub struct Sizes {
     pub screen_w: Option<f32>,
     pub screen_h: Option<f32>,
-    pub char_dim: Option<CharDim>,
+    pub text_char_dim: Option<CharDim>,
+    pub status_char_dim: Option<CharDim>,
 }
 
 #[macro_export]
@@ -219,12 +220,14 @@ macro_rules! Sizes {
     {
         screen_w: $screen_w:expr,
         screen_h: $screen_h:expr,
-        char_dim: $char_dim:expr $(,)?
+        text_char_dim: $text_char_dim:expr,
+        status_char_dim: $status_char_dim:expr $(,)?
     } => (
         Sizes {
             screen_w: $screen_w.into(),
             screen_h: $screen_h.into(),
-            char_dim: $char_dim.into(),
+            text_char_dim: $text_char_dim.into(),
+            status_char_dim: $status_char_dim.into(),
         }
     );
 }

@@ -385,10 +385,8 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphBrush<'font, V, H> {
                         .calculate_glyph_cache
                         .get_mut(&status_line_hash)
                         .unwrap();
-                    println!("pre ensure_vertices {:?}", glyphed.positioned.glyphs);
-                    glyphed.ensure_vertices_dbg(&self.texture_cache, screen_dims, to_vertex);
+                    glyphed.ensure_vertices(&self.texture_cache, screen_dims, to_vertex);
                     if let Some(mut vertex) = glyphed.vertices.pop() {
-                        println!("Some(mut vertex)");
                         transform_status_line(&mut vertex);
 
                         verts.push(vertex);
@@ -665,7 +663,6 @@ impl<'font, V: Clone + 'static> Glyphed<'font, V> {
         F: Fn(GlyphVertex) -> V,
     {
         if !self.vertices.is_empty() {
-            println!("ensure_vertices return");
             return;
         }
 

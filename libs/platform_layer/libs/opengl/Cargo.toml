@@ -11,6 +11,7 @@ path = "./src/opengl.rs"
 
 [dependencies]
 platform_types = { path = "../../../platform_types" }
+if_changed = { path = "../../../if_changed" }
 perf_viz = { path = "../../../perf_viz" }
 perf_viz_proc_macro = { path = "../../../perf_viz/libs/perf_viz_proc_macro" }
 gl_layer = { path = "gl_layer" }

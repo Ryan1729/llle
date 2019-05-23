@@ -16,7 +16,8 @@ pub struct State {
     screen_h: f32,
     mouse_x: f32,
     mouse_y: f32,
-    char_dim: CharDim,
+    text_char_dim: CharDim,
+    status_char_dim: CharDim,
 }
 
 impl State {
@@ -37,7 +38,7 @@ pub fn new() -> State {
 #[perf_viz::record]
 pub fn render_view(state: &State, view: &mut View) {
     use platform_types::BufferViewKind;
-    let status_line_y = state.screen_h - state.char_dim.h;
+    let status_line_y = state.screen_h - state.status_char_dim.h;
     view.buffers.clear();
 
     match state.current_buffer() {
@@ -53,7 +54,7 @@ pub fn render_view(state: &State, view: &mut View) {
             for position in buffer.cursors().iter().map(|c| c.position) {
                 let screen_position = position_to_screen_space(
                     position,
-                    state.char_dim,
+                    state.text_char_dim,
                     (state.scroll_x, state.scroll_y),
                 )
                 .into();
@@ -61,7 +62,7 @@ pub fn render_view(state: &State, view: &mut View) {
                 view.buffers.push(BufferView {
                     kind: BufferViewKind::Cursor,
                     screen_position,
-                    bounds: (state.screen_w, state.char_dim.h),
+                    bounds: (state.screen_w, state.text_char_dim.h),
                     color: [0.9, 0.3, 0.3, 1.0],
                     chars: "▏".to_string(),
                 });
@@ -70,7 +71,7 @@ pub fn render_view(state: &State, view: &mut View) {
             view.buffers.push(BufferView {
                 kind: BufferViewKind::StatusLine,
                 screen_position: (0.0, status_line_y),
-                bounds: (state.screen_w, state.char_dim.h),
+                bounds: (state.screen_w, state.text_char_dim.h),
                 color: [0.3, 0.9, 0.3, 1.0],
                 chars: {
                     use std::fmt::Write;
@@ -80,7 +81,7 @@ pub fn render_view(state: &State, view: &mut View) {
                         chars,
                         "m{:?} c{:?} ",
                         (state.mouse_x, state.mouse_y),
-                        (state.char_dim.w, state.char_dim.h)
+                        (state.text_char_dim.w, state.text_char_dim.h)
                     );
 
                     chars = buffer.cursors().iter().fold(chars, |mut acc, c| {
@@ -106,7 +107,7 @@ pub fn render_view(state: &State, view: &mut View) {
             view.buffers.push(BufferView {
                 kind: BufferViewKind::StatusLine,
                 screen_position: (0.0, status_line_y),
-                bounds: (state.screen_w, state.char_dim.h),
+                bounds: (state.screen_w, state.text_char_dim.h),
                 color: [0.9, 0.3, 0.3, 1.0],
                 chars: "No buffer selected.".to_owned(),
             });
@@ -162,7 +163,8 @@ pub fn update_and_render(state: &mut State, input: Input) -> UpdateAndRenderOutp
         Input::SetSizes(sizes) => {
             set_if_present!(sizes => state.screen_w);
             set_if_present!(sizes => state.screen_h);
-            set_if_present!(sizes => state.char_dim);
+            set_if_present!(sizes => state.text_char_dim);
+            set_if_present!(sizes => state.status_char_dim);
         }
         Input::SetMousePos(ScreenSpaceXY { x, y }) => {
             state.mouse_x = x;
@@ -170,7 +172,7 @@ pub fn update_and_render(state: &mut State, input: Input) -> UpdateAndRenderOutp
         }
         Input::ReplaceCursors(xy) => {
             let position =
-                screen_space_to_position(xy, state.char_dim, (state.scroll_x, state.scroll_y));
+                screen_space_to_position(xy, state.text_char_dim, (state.scroll_x, state.scroll_y));
             if let Some(b) = state.current_buffer_mut() {
                 if b.in_bounds(position) {
                     let cursors = b.cursors_mut();
