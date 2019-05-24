@@ -391,6 +391,51 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphBrush<'font, V, H> {
 
                         verts.push(vertex);
                     }
+
+                    // Okay, we need to change the api here. What I want to be able to say is:
+                    //let tex_coords = f(status_line_hash);
+                    // for range in highlight_ranges {
+                    //     let pixel_coords = f(range);
+                    //     let custom_verticies = get_custom_verticies(tex_coords, pixel_coords);
+                    //     verts.extend(custom_verticies);
+                    // }
+
+                    //Quick attempt that feels to clumsy to continue with directly
+
+                    // for range in highlight_ranges {
+                    //     perf_viz::start_record!("BrushAction::Draw highlight_ranges");
+                    //     let highlight_hash = {
+                    //             let section = Section {
+                    //                 // The status line will be a rectangle with the height of this glyph
+                    //                 //stretched horzontally across the screen.
+                    //                 text: "█",
+                    //                 scale: Scale::uniform(11.0),
+                    //                 screen_position: status_line_position,
+                    //                 bounds: (std::f32::INFINITY, std::f32::INFINITY),
+                    //                 color: [7.0 / 256.0, 7.0 / 256.0, 7.0 / 256.0, 1.0],
+                    //                 layout: Layout::default_single_line(),
+                    //                 z: 0.25,
+                    //                 ..Section::default()
+                    //             }
+                    //             .into();
+                    //
+                    //             let section_hash = self.cache_glyphs(&section, &section.layout);
+                    //             self.section_buffer.push(section_hash);
+                    //             self.keep_in_cache.insert(section_hash);
+                    //
+                    //             (transform_status_line, section_hash)
+                    //         },
+                    //     );
+                    //     let glyphed = self
+                    //         .calculate_glyph_cache
+                    //         .get_mut(&highlight_hash)
+                    //         .unwrap();
+                    //     // pre-positioned glyph vertices can't be cached so
+                    //     // generate & move straight into draw vec
+                    //     glyphed.ensure_vertices(&self.texture_cache, screen_dims, to_vertex);
+                    //     verts.append(&mut glyphed.vertices);
+                    //     perf_viz::end_record!("BrushAction::Draw highlight_ranges");
+                    // }
                 }
 
                 verts
