@@ -17,6 +17,7 @@ full_rusttype = { features = ["gpu_cache"], package = "rusttype", path = "../rus
 hashbrown = "0.2"
 twox-hash = "1"
 perf_viz = { path = "../../../../perf_viz" }
+macros = { path = "../../../../macros" }
 
 [dev-dependencies]
 env_logger = { version = "0.6", default-features = false }

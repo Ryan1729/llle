@@ -1,7 +1,7 @@
 use editor_types::{Cursor, MultiCursorBuffer, Vec1};
 use macros::{d, dg};
 use platform_types::{
-    position_to_screen_space, screen_space_to_position, BufferView, CharDim, Cmd, Input,
+    position_to_screen_space, screen_space_to_position, BufferView, CharDim, Cmd, Highlight, Input,
     ScreenSpaceXY, UpdateAndRenderOutput, View,
 };
 use text_buffer::TextBuffer;
@@ -43,15 +43,12 @@ pub fn render_view(state: &State, view: &mut View) {
 
     match state.current_buffer() {
         Some(buffer) => {
-            view.buffers.push(BufferView {
-                kind: BufferViewKind::Edit,
-                screen_position: (state.scroll_x, state.scroll_y),
-                bounds: (std::f32::INFINITY, std::f32::INFINITY),
-                color: [0.3, 0.3, 0.9, 1.0],
-                chars: buffer.chars().collect::<String>(),
-            });
+            let cursors = buffer.cursors();
+            let mut highlights = Vec::with_capacity(cursors.len());
 
-            for position in buffer.cursors().iter().map(|c| c.position) {
+            for c in cursors.iter() {
+                let position = c.position;
+
                 let screen_position = position_to_screen_space(
                     position,
                     state.text_char_dim,
@@ -65,8 +62,22 @@ pub fn render_view(state: &State, view: &mut View) {
                     bounds: (state.screen_w, state.text_char_dim.h),
                     color: [0.9, 0.3, 0.3, 1.0],
                     chars: "▏".to_string(),
+                    ..d!()
                 });
+
+                if let Some(h) = c.highlight_position {
+                    highlights.push(Highlight::new((h, position)));
+                }
             }
+
+            view.buffers.push(BufferView {
+                kind: BufferViewKind::Edit,
+                screen_position: (state.scroll_x, state.scroll_y),
+                bounds: (std::f32::INFINITY, std::f32::INFINITY),
+                color: [0.3, 0.3, 0.9, 1.0],
+                chars: buffer.chars().collect::<String>(),
+                highlights,
+            });
 
             view.buffers.push(BufferView {
                 kind: BufferViewKind::StatusLine,
@@ -101,6 +112,7 @@ pub fn render_view(state: &State, view: &mut View) {
 
                     chars
                 },
+                ..d!()
             });
         }
         None => {
@@ -110,6 +122,7 @@ pub fn render_view(state: &State, view: &mut View) {
                 bounds: (state.screen_w, state.text_char_dim.h),
                 color: [0.9, 0.3, 0.3, 1.0],
                 chars: "No buffer selected.".to_owned(),
+                ..d!()
             });
         }
     };

@@ -5,6 +5,7 @@
 use glutin::dpi::LogicalPosition;
 use glutin::{Api, ContextTrait, GlProfile, GlRequest};
 use glyph_brush::{rusttype::Font, *};
+use macros::d;
 
 use platform_types::{BufferView, CharDim, Input, ScreenSpaceXY, Sizes, UpdateAndRender};
 
@@ -270,6 +271,7 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
         }
 
         let mut status_line_position = None;
+        let mut highlight_ranges = Vec::new();
         perf_viz::start_record!("for &BufferView");
         for &BufferView {
             kind,
@@ -277,6 +279,7 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
             color,
             ref chars,
             screen_position,
+            ref highlights,
         } in view.buffers.iter()
         {
             use platform_types::BufferViewKind;
@@ -315,6 +318,10 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                 },
                 ..Section::default()
             });
+
+            highlight_ranges.extend(highlights.iter().map(|h| {
+                d!() //TODO actually map
+            }));
         }
         perf_viz::end_record!("for &BufferView");
 
@@ -329,6 +336,7 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
             width as _,
             height as _,
             status_line_position,
+            highlight_ranges,
         )?;
 
         window.swap_buffers()?;

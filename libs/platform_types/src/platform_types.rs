@@ -189,6 +189,27 @@ pub enum BufferViewKind {
     Cursor,
 }
 
+d!(for BufferViewKind: BufferViewKind::Cursor);
+
+pub struct Highlight {
+    min: Position,
+    max: Position,
+}
+
+impl Highlight {
+    pub fn new((p1, p2): (Position, Position)) -> Self {
+        Highlight {
+            min: std::cmp::min(p1, p2),
+            max: std::cmp::max(p1, p2),
+        }
+    }
+
+    pub fn get(&self) -> (Position, Position) {
+        (self.min, self.max)
+    }
+}
+
+#[derive(Default)]
 pub struct BufferView {
     pub kind: BufferViewKind,
     pub screen_position: (f32, f32),
@@ -196,6 +217,7 @@ pub struct BufferView {
     pub color: [f32; 4],
     //TODO make this a &str or a char iterator
     pub chars: String,
+    pub highlights: Vec<Highlight>,
 }
 
 pub enum Cmd {

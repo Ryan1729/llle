@@ -511,6 +511,7 @@ dependencies = [
  "hashbrown 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "macros 0.1.0",
  "ordered-float 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "perf_viz 0.1.0",
  "rusttype 0.7.5",
@@ -773,6 +774,7 @@ dependencies = [
  "if_changed 0.1.0",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "macros 0.1.0",
  "ordered-float 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "perf_viz 0.1.0",
  "perf_viz_proc_macro 0.1.0",
@@ -865,6 +867,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "platform_layer"
 version = "0.0.1"
 dependencies = [
+ "macros 0.1.0",
  "opengl 0.0.1",
  "platform_types 0.1.0",
 ]
@@ -1104,6 +1107,7 @@ dependencies = [
  "image 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "linked-hash-map 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "macros 0.1.0",
  "num_cpus 1.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ordered-float 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "perf_viz 0.1.0",

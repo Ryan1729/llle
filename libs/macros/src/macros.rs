@@ -142,6 +142,7 @@ macro_rules! d {
     () => {
         Default::default()
     };
+    //the generics monstrosity originated at https://stackoverflow.com/a/52135598
     (
         $(
             <$($generic_name:ident $(: $generic_trait_1:ident $(+ $generic_trait_n:ident)* )? ),+>

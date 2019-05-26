@@ -46,15 +46,26 @@ impl From<ByteIndex> for ByteLength {
 pub struct Cursor {
     pub position: Position,
     pub sticky_offset: CharOffset,
+    pub highlight_position: Option<Position>,
 }
 
-fmt_display! {for Cursor : Cursor { position, sticky_offset, } in "{}({})", position, sticky_offset}
+fmt_display! {
+    for Cursor : Cursor {
+            position,
+            sticky_offset,
+            highlight_position
+        } in "{}({}){}",
+        position,
+        sticky_offset,
+        highlight_position.map(|h| format!("h:{}", h)).unwrap_or_default()
+}
 
 impl Cursor {
     pub fn new(position: Position) -> Self {
         Cursor {
             position,
             sticky_offset: position.offset,
+            highlight_position: None,
         }
     }
 }

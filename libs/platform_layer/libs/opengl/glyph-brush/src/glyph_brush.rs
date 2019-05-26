@@ -6,6 +6,7 @@ pub use self::builder::*;
 use super::*;
 use full_rusttype::gpu_cache::{Cache, CachedBy};
 use log::error;
+use macros::d;
 use std::{
     borrow::Cow,
     fmt,
@@ -106,9 +107,17 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphCruncher<'font> for GlyphBr
     }
 }
 
-pub struct StatusLineInfo<V: Clone + 'static> {
+#[derive(Clone, Default)]
+pub struct HighlightRange {
+    pub pixel_coords: PixelCoords,
+    pub bounds: Bounds,
+}
+
+pub struct AdditionalRects<V: Clone + 'static> {
     pub transform_status_line: fn(&mut V),
+    pub extract_tex_coords: fn(&V) -> TexCoords,
     pub status_line_position: (f32, f32),
+    pub highlight_ranges: Vec<HighlightRange>,
 }
 
 impl<'font, V: Clone + 'static, H: BuildHasher> GlyphBrush<'font, V, H> {
@@ -251,7 +260,7 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphBrush<'font, V, H> {
         (screen_w, screen_h): (u32, u32),
         update_texture: F1,
         to_vertex: F2,
-        status_line_info: Option<StatusLineInfo<V>>,
+        additional_rects: Option<AdditionalRects<V>>,
     ) -> Result<BrushAction<V>, BrushError>
     where
         F1: FnMut(Rect<u32>, &[u8]),
@@ -274,12 +283,14 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphBrush<'font, V, H> {
             // be retained in the texture cache avoiding cache thrashing if they are rendered
             // in a 2-draw per frame style.
 
-            // This status line stuff was hacked in here to fix a perf issue arising from
+            // This additional rects stuff was hacked in here to fix a perf issue arising from
             // the previous method that used multiple instances of the character
-            let status_line_hash = status_line_info.map(
-                |StatusLineInfo {
+            let rect_hash = additional_rects.map(
+                |AdditionalRects {
                      transform_status_line,
+                     extract_tex_coords,
                      status_line_position,
+                     highlight_ranges,
                  }| {
                     let section = Section {
                         // The status line will be a rectangle with the height of this glyph
@@ -299,7 +310,12 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphBrush<'font, V, H> {
                     self.section_buffer.push(section_hash);
                     self.keep_in_cache.insert(section_hash);
 
-                    (transform_status_line, section_hash)
+                    (
+                        transform_status_line,
+                        extract_tex_coords,
+                        section_hash,
+                        highlight_ranges,
+                    )
                 },
             );
 
@@ -380,62 +396,43 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphBrush<'font, V, H> {
 
                 // This status line stuff was hacked in here to fix a perf issue arising from
                 // the previous method that used multiple instances of the character
-                if let Some((transform_status_line, status_line_hash)) = status_line_hash {
-                    let glyphed = self
-                        .calculate_glyph_cache
-                        .get_mut(&status_line_hash)
-                        .unwrap();
+                if let Some((
+                    transform_status_line,
+                    extract_tex_coords,
+                    rect_hash,
+                    highlight_ranges,
+                )) = rect_hash
+                {
+                    let glyphed = self.calculate_glyph_cache.get_mut(&rect_hash).unwrap();
                     glyphed.ensure_vertices(&self.texture_cache, screen_dims, to_vertex);
                     if let Some(mut vertex) = glyphed.vertices.pop() {
+                        let tex_coords = extract_tex_coords(&vertex);
+
                         transform_status_line(&mut vertex);
 
                         verts.push(vertex);
+
+                        let highlight_base = GlyphVertex {
+                            tex_coords,
+                            pixel_coords: d!(),
+                            bounds: d!(),
+                            screen_dimensions: screen_dims,
+                            color: [0.875, 0.875, 0.0, 0.75],
+                            z: 0.5,
+                        };
+                        for range in highlight_ranges {
+                            let HighlightRange {
+                                pixel_coords,
+                                bounds,
+                            } = range;
+                            verts.push(to_vertex(GlyphVertex {
+                                tex_coords,
+                                pixel_coords,
+                                bounds,
+                                ..highlight_base
+                            }));
+                        }
                     }
-
-                    // Okay, we need to change the api here. What I want to be able to say is:
-                    //let tex_coords = f(status_line_hash);
-                    // for range in highlight_ranges {
-                    //     let pixel_coords = f(range);
-                    //     let custom_verticies = get_custom_verticies(tex_coords, pixel_coords);
-                    //     verts.extend(custom_verticies);
-                    // }
-
-                    //Quick attempt that feels to clumsy to continue with directly
-
-                    // for range in highlight_ranges {
-                    //     perf_viz::start_record!("BrushAction::Draw highlight_ranges");
-                    //     let highlight_hash = {
-                    //             let section = Section {
-                    //                 // The status line will be a rectangle with the height of this glyph
-                    //                 //stretched horzontally across the screen.
-                    //                 text: "█",
-                    //                 scale: Scale::uniform(11.0),
-                    //                 screen_position: status_line_position,
-                    //                 bounds: (std::f32::INFINITY, std::f32::INFINITY),
-                    //                 color: [7.0 / 256.0, 7.0 / 256.0, 7.0 / 256.0, 1.0],
-                    //                 layout: Layout::default_single_line(),
-                    //                 z: 0.25,
-                    //                 ..Section::default()
-                    //             }
-                    //             .into();
-                    //
-                    //             let section_hash = self.cache_glyphs(&section, &section.layout);
-                    //             self.section_buffer.push(section_hash);
-                    //             self.keep_in_cache.insert(section_hash);
-                    //
-                    //             (transform_status_line, section_hash)
-                    //         },
-                    //     );
-                    //     let glyphed = self
-                    //         .calculate_glyph_cache
-                    //         .get_mut(&highlight_hash)
-                    //         .unwrap();
-                    //     // pre-positioned glyph vertices can't be cached so
-                    //     // generate & move straight into draw vec
-                    //     glyphed.ensure_vertices(&self.texture_cache, screen_dims, to_vertex);
-                    //     verts.append(&mut glyphed.vertices);
-                    //     perf_viz::end_record!("BrushAction::Draw highlight_ranges");
-                    // }
                 }
 
                 verts
@@ -551,6 +548,10 @@ struct LastDrawInfo {
     text_state: u64,
 }
 
+pub type TexCoords = Rect<f32>;
+pub type PixelCoords = Rect<i32>;
+pub type Bounds = Rect<f32>;
+
 // glyph: &PositionedGlyph,
 // color: Color,
 // font_id: FontId,
@@ -562,9 +563,9 @@ struct LastDrawInfo {
 /// Data used to generate vertex information for a single glyph
 #[derive(Debug)]
 pub struct GlyphVertex {
-    pub tex_coords: Rect<f32>,
-    pub pixel_coords: Rect<i32>,
-    pub bounds: Rect<f32>,
+    pub tex_coords: TexCoords,
+    pub pixel_coords: PixelCoords,
+    pub bounds: Bounds,
     pub screen_dimensions: (f32, f32),
     pub color: Color,
     pub z: f32,

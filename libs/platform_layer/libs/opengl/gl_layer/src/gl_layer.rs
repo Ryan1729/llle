@@ -1,7 +1,7 @@
 // This file was split off of a file that was part of https://github.com/alexheretic/glyph-brush
 use gl::types::*;
 use glyph_brush::*;
-use macros::invariants_checked;
+use macros::{d, invariants_checked};
 use std::{ffi::CString, mem, ptr, str};
 
 pub const EDIT_Z: f32 = 0.5;
@@ -37,6 +37,15 @@ fn transform_status_line(vertex: &mut Vertex) {
     let max_x = &mut vertex[3];
     *max_x = std::f32::MAX;
     vertex[13] = 1.0;
+}
+
+fn extract_tex_coords(vertex: &Vertex) -> TexCoords {
+    let mut output: TexCoords = d!();
+    output.min.x = vertex[5];
+    output.min.y = vertex[6];
+    output.max.x = vertex[7];
+    output.max.x = vertex[8];
+    output
 }
 
 #[inline]
@@ -249,6 +258,7 @@ pub fn render(
     width: u32,
     height: u32,
     status_line_position: Option<(f32, f32)>,
+    highlight_ranges: Vec<HighlightRange>,
 ) -> Res<()> {
     let dimensions = (width, height);
     let mut brush_action;
@@ -274,9 +284,11 @@ pub fn render(
                 perf_viz::end_record!("|rect, tex_data|");
             },
             to_vertex,
-            status_line_position.map(|status_line_position| StatusLineInfo {
+            status_line_position.map(|status_line_position| AdditionalRects {
                 transform_status_line,
+                extract_tex_coords,
                 status_line_position,
+                highlight_ranges: highlight_ranges.clone(),
             }),
         );
         perf_viz::end_record!("process_queued");
