@@ -23,6 +23,12 @@ pub struct Point<N> {
 
 d!(<N: Default> for Point<N> : Point {x: d!(), y: d!()});
 
+impl<N> From<(N, N)> for Point<N> {
+    fn from((x, y): (N, N)) -> Self {
+        Point { x, y }
+    }
+}
+
 /// A vector in 2-dimensional space, with each dimension of type `N`.
 ///
 /// Legal operations on vectors are addition and subtraction by vectors,

@@ -319,8 +319,25 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                 ..Section::default()
             });
 
+            let mut rect_bounds: Bounds = d!();
+            rect_bounds.max = bounds.into();
+
             highlight_ranges.extend(highlights.iter().map(|h| {
-                d!() //TODO actually map
+                let (min, max) = h.get();
+
+                let mut pixel_coords: PixelCoords = d!();
+                pixel_coords.min.x =
+                    (min.offset.0 as f32 * text_char_dim.w + screen_position.0) as i32;
+                pixel_coords.min.y = (min.line as f32 * text_char_dim.h + screen_position.1) as i32;
+
+                pixel_coords.max.x =
+                    (max.offset.0 as f32 * text_char_dim.w + screen_position.0) as i32;
+                pixel_coords.max.y = (max.line as f32 * text_char_dim.h + screen_position.1) as i32;
+
+                HighlightRange {
+                    pixel_coords,
+                    bounds: rect_bounds,
+                }
             }));
         }
         perf_viz::end_record!("for &BufferView");
