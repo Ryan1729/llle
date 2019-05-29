@@ -509,6 +509,7 @@ dependencies = [
  "glutin 0.20.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "glyph_brush_layout 0.1.5",
  "hashbrown 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "if_changed 0.1.0",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "macros 0.1.0",

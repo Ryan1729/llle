@@ -107,7 +107,7 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphCruncher<'font> for GlyphBr
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct HighlightRange {
     pub pixel_coords: PixelCoords,
     pub bounds: Bounds,
@@ -424,7 +424,7 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphBrush<'font, V, H> {
                             let HighlightRange {
                                 pixel_coords,
                                 bounds,
-                            } = range;
+                            } = if_changed::dbg!(range);
                             verts.push(to_vertex(GlyphVertex {
                                 tex_coords,
                                 pixel_coords,

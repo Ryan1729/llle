@@ -1,4 +1,4 @@
-use macros::{fmt_display, integer_newtype, usize_newtype};
+use macros::{d, fmt_display, integer_newtype, usize_newtype};
 use platform_types::{CharOffset, Move, Position};
 use std::borrow::{Borrow, BorrowMut};
 use std::ops::{Add, Sub};
@@ -42,7 +42,7 @@ impl From<ByteIndex> for ByteLength {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Cursor {
     pub position: Position,
     pub sticky_offset: CharOffset,
@@ -65,10 +65,13 @@ impl Cursor {
         Cursor {
             position,
             sticky_offset: position.offset,
-            highlight_position: None,
+            //highlight_position: None,
+            highlight_position: Some(d!()), // for testing
         }
     }
 }
+
+d!(for Cursor: Cursor::new(d!()));
 
 impl Borrow<Position> for Cursor {
     fn borrow(&self) -> &Position {

@@ -29,7 +29,7 @@ macro_rules! dbg {
     ) => {
         match $value {
             temp => {
-                println!(
+                if_changed::println!(
                     "[{}:{}] {} = {:#?}",
                     file!(),
                     line!(),
