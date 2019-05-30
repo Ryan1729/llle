@@ -111,6 +111,8 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphCruncher<'font> for GlyphBr
 pub struct HighlightRange {
     pub pixel_coords: PixelCoords,
     pub bounds: Bounds,
+    pub color: Color,
+    pub z: f32,
 }
 
 pub struct AdditionalRects<V: Clone + 'static> {
@@ -406,7 +408,19 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphBrush<'font, V, H> {
                     let glyphed = self.calculate_glyph_cache.get_mut(&rect_hash).unwrap();
                     glyphed.ensure_vertices(&self.texture_cache, screen_dims, to_vertex);
                     if let Some(mut vertex) = glyphed.vertices.pop() {
-                        let tex_coords = extract_tex_coords(&vertex);
+                        let tex_coords = {
+                            let mut tex_coords = extract_tex_coords(&vertex);
+
+                            // Hacky way to prevent sampling outside of the texture.
+                            let x_apron = (tex_coords.max.x - tex_coords.min.x) * 0.25;
+                            let y_apron = (tex_coords.max.y - tex_coords.min.y) * 0.25;
+                            tex_coords.min.x += x_apron;
+                            tex_coords.min.y += y_apron;
+                            tex_coords.max.x -= x_apron;
+                            tex_coords.max.y -= y_apron;
+
+                            tex_coords
+                        };
 
                         transform_status_line(&mut vertex);
 
@@ -414,21 +428,22 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphBrush<'font, V, H> {
 
                         let highlight_base = GlyphVertex {
                             tex_coords,
-                            pixel_coords: d!(),
-                            bounds: d!(),
                             screen_dimensions: screen_dims,
-                            color: [0.875, 0.875, 0.0, 0.75],
-                            z: 0.5,
+                            ..d!()
                         };
                         for range in highlight_ranges {
                             let HighlightRange {
                                 pixel_coords,
                                 bounds,
+                                color,
+                                z,
                             } = if_changed::dbg!(range);
                             verts.push(to_vertex(GlyphVertex {
                                 tex_coords,
                                 pixel_coords,
                                 bounds,
+                                color,
+                                z,
                                 ..highlight_base
                             }));
                         }
@@ -561,7 +576,7 @@ pub type Bounds = Rect<f32>;
 // (screen_width, screen_height): (f32, f32),
 
 /// Data used to generate vertex information for a single glyph
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct GlyphVertex {
     pub tex_coords: TexCoords,
     pub pixel_coords: PixelCoords,

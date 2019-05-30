@@ -1,5 +1,7 @@
 ## TODO
 
+* fix bug where hitting the x button in the window bar locks up the whole program
+
 * Shift and arrow keys to select text
     * Allow highlighting text/changing the background
       * Currently we send down an `Option<StatusLineInfo<V>>`. I think instead

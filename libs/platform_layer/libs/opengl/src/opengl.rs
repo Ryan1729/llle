@@ -336,6 +336,8 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                 if_changed::dbg!(HighlightRange {
                     pixel_coords,
                     bounds: rect_bounds,
+                    color: [0.9, 0.9, 0.9, 0.3],
+                    z: gl_layer::HIGHLIGHT_Z,
                 })
             }));
         }

@@ -5,6 +5,7 @@ use macros::{d, invariants_checked};
 use std::{ffi::CString, mem, ptr, str};
 
 pub const EDIT_Z: f32 = 0.5;
+pub const HIGHLIGHT_Z: f32 = 0.4375;
 pub const CURSOR_Z: f32 = 0.375;
 pub const STATUS_BACKGROUND_Z: f32 = 0.25;
 pub const STATUS_Z: f32 = 0.125;
@@ -41,10 +42,11 @@ fn transform_status_line(vertex: &mut Vertex) {
 
 fn extract_tex_coords(vertex: &Vertex) -> TexCoords {
     let mut output: TexCoords = d!();
+    // To compenate for y flipping in to_vertex
     output.min.x = vertex[5];
-    output.min.y = vertex[6];
+    output.max.y = vertex[6];
     output.max.x = vertex[7];
-    output.max.x = vertex[8];
+    output.min.y = vertex[8];
     output
 }
 
@@ -112,10 +114,12 @@ fn to_vertex(
         z,
         gl_rect.max.x,
         gl_rect.min.y,
+        // this isn't `mix.x, min.y, max.x, max.y` in order to flip the y axis
         tex_coords.min.x,
         tex_coords.max.y,
         tex_coords.max.x,
         tex_coords.min.y,
+        //
         color[0],
         color[1],
         color[2],
