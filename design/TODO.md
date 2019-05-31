@@ -1,7 +1,5 @@
 ## TODO
 
-* fix bug where hitting the x button in the window bar locks up the whole program
-
 * Shift and arrow keys to select text
     * Allow highlighting text/changing the background
       * Currently we send down an `Option<StatusLineInfo<V>>`. I think instead
@@ -16,3 +14,5 @@
     * Highlight only between a fixed region
     * allow multiple, dynamic, regions
     * replace text inside regions when typing
+
+* fix cursor being visible through status line (!?)

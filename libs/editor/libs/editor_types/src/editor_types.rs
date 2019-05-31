@@ -66,7 +66,7 @@ impl Cursor {
             position,
             sticky_offset: position.offset,
             //highlight_position: None,
-            highlight_position: Some(d!()), // for testing
+            highlight_position: Some({let mut p: Position = d!(); p.offset +=1; p }), // for testing
         }
     }
 }

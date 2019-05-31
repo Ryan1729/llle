@@ -137,9 +137,16 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                     };
                 }
 
+                macro_rules! quit {
+                    () => {{
+                        call_u_and_r!(Input::Quit);
+                        running = false;
+                    }};
+                }
+
                 use platform_types::Move;
                 match event {
-                    WindowEvent::CloseRequested => running = false,
+                    WindowEvent::CloseRequested => quit!(),
                     WindowEvent::Resized(size) => {
                         let dpi = window.get_hidpi_factor();
                         window.resize(size.to_physical(dpi));
@@ -191,8 +198,7 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                         ..
                     } => match keypress {
                         VirtualKeyCode::Escape => {
-                            call_u_and_r!(Input::Quit);
-                            running = false;
+                            quit!();
                         }
                         VirtualKeyCode::Back => {
                             call_u_and_r!(Input::Delete);
@@ -336,7 +342,7 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                 if_changed::dbg!(HighlightRange {
                     pixel_coords,
                     bounds: rect_bounds,
-                    color: [0.9, 0.9, 0.9, 0.3],
+                    color: [0.0, 0.0, 0.0, 0.6],
                     z: gl_layer::HIGHLIGHT_Z,
                 })
             }));
@@ -354,6 +360,7 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
             width as _,
             height as _,
             status_line_position,
+            status_scale,
             highlight_ranges,
         )?;
 
@@ -373,7 +380,7 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
     }
 
     // If we got here, we assume that we've sent a Quit input to the editor thread so it will stop.
-    join_handle.join().expect("Could not join editor tread!");
+    join_handle.join().expect("Could not join editor thread!");
 
     perf_viz::output!();
 
