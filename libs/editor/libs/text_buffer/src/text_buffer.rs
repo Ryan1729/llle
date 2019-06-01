@@ -1,7 +1,7 @@
 use editor_types::{ByteIndex, Cursor, MultiCursorBuffer, Vec1};
 use macros::{borrow, borrow_mut, d};
 use panic_safe_rope::Rope;
-use platform_types::{CharOffset, Move, Position};
+use platform_types::{AbsoluteCharOffset, CharOffset, Move, Position};
 use std::borrow::Borrow;
 
 #[derive(Default)]
@@ -17,7 +17,7 @@ impl MultiCursorBuffer for TextBuffer {
     #[perf_viz::record]
     fn insert(&mut self, ch: char) {
         for cursor in &mut self.cursors {
-            if let Some(CharOffset(o)) = pos_to_char_offset(&self.rope, &cursor.position) {
+            if let Some(AbsoluteCharOffset(o)) = pos_to_char_offset(&self.rope, &cursor.position) {
                 self.rope.insert_char(o, ch);
                 move_right(&self.rope, cursor);
             }
@@ -27,10 +27,27 @@ impl MultiCursorBuffer for TextBuffer {
     #[perf_viz::record]
     fn delete(&mut self) {
         for cursor in &mut self.cursors {
-            match pos_to_char_offset(&self.rope, &cursor.position) {
-                Some(CharOffset(o)) if o > 0 => {
+            let pair = {
+                let rope = &self.rope;
+                (
+                    pos_to_char_offset(rope, &cursor.position),
+                    cursor
+                        .highlight_position
+                        .and_then(|p| pos_to_char_offset(rope, &p)),
+                )
+            };
+            match pair {
+                (Some(AbsoluteCharOffset(o)), None) if o > 0 => {
                     self.rope.remove((o - 1)..o);
                     move_left(&self.rope, cursor);
+                }
+                (Some(o1), Some(o2)) if o1 > 0 || o2 > 0 => {
+                    let min = std::cmp::min(o1, o2);
+                    let max = std::cmp::max(o1, o2);
+
+                    self.rope.remove(dbg!(min.0..max.0));
+                    cursor.position = char_offset_to_pos(&self.rope, &min).unwrap_or_default();
+                    cursor.highlight_position = None;
                 }
                 _ => {}
             }
@@ -72,13 +89,17 @@ impl MultiCursorBuffer for TextBuffer {
     #[perf_viz::record]
     fn nearest_valid_position_on_same_line<P: Borrow<Position>>(&self, p: P) -> Option<Position> {
         let p = p.borrow();
-        let line = self.rope.lines().nth(p.line)?;
-
-        Some(Position {
-            offset: std::cmp::min(p.offset, CharOffset(line.len_chars())),
-            ..*p
-        })
+        nearest_valid_position_on_same_line(&self.rope, p)
     }
+}
+
+fn nearest_valid_position_on_same_line(rope: &Rope, p: &Position) -> Option<Position> {
+    let line = rope.lines().nth(p.line)?;
+
+    Some(Position {
+        offset: std::cmp::min(p.offset, CharOffset(line.len_chars())),
+        ..*p
+    })
 }
 
 fn in_bounds<P: Borrow<Position>>(rope: &Rope, position: P) -> bool {
@@ -87,7 +108,7 @@ fn in_bounds<P: Borrow<Position>>(rope: &Rope, position: P) -> bool {
 
 fn find_index<P: Borrow<Position>>(rope: &Rope, p: P) -> Option<ByteIndex> {
     pos_to_char_offset(rope, p.borrow())
-        .and_then(|CharOffset(o)| rope.char_to_byte(o).map(ByteIndex))
+        .and_then(|AbsoluteCharOffset(o)| rope.char_to_byte(o).map(ByteIndex))
 }
 
 fn nth_line_count(rope: &Rope, n: usize) -> Option<CharOffset> {
@@ -102,8 +123,95 @@ fn last_line_index_and_count(rope: &Rope) -> Option<(usize, CharOffset)> {
 }
 
 #[perf_viz::record]
-fn pos_to_char_offset(rope: &Rope, position: &Position) -> Option<CharOffset> {
-    Some(CharOffset(rope.line_to_char(position.line)?) + position.offset)
+fn pos_to_char_offset(rope: &Rope, position: &Position) -> Option<AbsoluteCharOffset> {
+    Some(AbsoluteCharOffset(rope.line_to_char(position.line)?) + position.offset)
+}
+
+#[perf_viz::record]
+fn char_offset_to_pos(rope: &Rope, offset: &AbsoluteCharOffset) -> Option<Position> {
+    None //TODO
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::prelude::*;
+    use proptest::{prop_compose, proptest};
+
+    macro_rules! r {
+        ($s:expr) => {
+            Rope::from_str(&$s)
+        };
+    }
+
+    prop_compose! {
+        fn arb_rope()(s in any::<String>()) -> Rope {
+            r!(&s)
+        }
+    }
+
+    prop_compose! {
+        fn arb_absolute_char_offset(max_len: usize)(offset in 0..max_len) -> AbsoluteCharOffset {
+            AbsoluteCharOffset(offset)
+        }
+    }
+
+    prop_compose! {
+        fn vec_and_index()(vec in prop::collection::vec(".*", 1..100))
+                        (index in 0..vec.len(), vec in Just(vec))
+                        -> (Vec<String>, usize) {
+           (vec, index)
+       }
+    }
+
+    prop_compose! {
+        fn arb_rope_and_offset()
+            (s in ".*")
+            (offset in 0..r!(&s).len_chars(), s in Just(s)) -> (Rope, AbsoluteCharOffset) {
+            (Rope::from_str(&s), AbsoluteCharOffset(offset))
+        }
+    }
+
+    // Lifetimes!
+    fn arb_rope_and_pos() -> impl Strategy<Value = (Rope, Position)> {
+        ".*".prop_flat_map(|s: String| {
+            (0..r!(s).len_lines(), Just(s)).prop_flat_map(|(line_index, s)| {
+                let line_len = r!(s)
+                    .lines()
+                    .nth(line_index)
+                    //The index comes from `len_lines()` so it should always produce a `Some`!
+                    .unwrap()
+                    .len_chars();
+
+                ((0..=line_len), Just(s)).prop_map(move |(offset, s)| {
+                    (
+                        r!(s),
+                        Position {
+                            line: line_index,
+                            offset: CharOffset(offset),
+                        },
+                    )
+                })
+            })
+        })
+    }
+
+    proptest! {
+        #[test]
+        fn char_offset_to_pos_to_char_offset((rope, offset) in arb_rope_and_offset()) {
+            if let Some(p) = char_offset_to_pos(&rope, &offset) {
+                assert_eq!(pos_to_char_offset(&rope, &p), Some(offset))
+            }
+        }
+
+        #[test]
+        fn pos_to_to_char_offset_to_pos((rope, pos) in arb_rope_and_pos()) {
+            if let Some(o) = pos_to_char_offset(&rope, &pos) {
+                assert_eq!(char_offset_to_pos(&rope, &o), Some(pos))
+            }
+        }
+    }
+
 }
 
 enum Moved {

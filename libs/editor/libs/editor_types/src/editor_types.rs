@@ -4,8 +4,7 @@ use std::borrow::{Borrow, BorrowMut};
 use std::ops::{Add, Sub};
 pub use vec1::Vec1;
 
-/// In index into thebuffer's underlying bytes. Indexes into the gap are possible but usually
-/// (always?) undesired.
+/// An index into the buffer's underlying bytes.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ByteIndex(pub usize);
 

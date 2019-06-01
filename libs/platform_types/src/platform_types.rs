@@ -90,10 +90,9 @@ pub fn position_to_screen_space(
 
 d!(for Input : Input::None);
 
-/// The nth space between utf8 characters, not including the gap. So in the string "aöc" there are
+/// The nth space between utf8 characters. So in the string "aöc" there are
 /// four possibe `CharOffset`s. (Note that "ö" is two characters: "o\u{308}".)
 /// Here they are represented as vertical bars: "|a|ö|c|"
-/// Whatever the state of the gap is, that is how `CharOffset`s are meant to be interpreted.
 #[derive(Clone, Copy, Debug, Default, Hash)]
 pub struct CharOffset(pub usize);
 
@@ -106,6 +105,34 @@ integer_newtype! {
 }
 
 fmt_display! {for CharOffset : CharOffset(offset) in "{}", offset}
+
+/// A `CharOffset` that is counting from the start of the buffer
+#[derive(Clone, Copy, Debug, Default, Hash)]
+pub struct AbsoluteCharOffset(pub usize);
+
+usize_newtype! {
+    AbsoluteCharOffset
+}
+
+integer_newtype! {
+    AbsoluteCharOffset
+}
+
+fmt_display! {for AbsoluteCharOffset : AbsoluteCharOffset(offset) in "{}(abs.)", offset}
+
+impl std::ops::Add<CharOffset> for AbsoluteCharOffset {
+    type Output = AbsoluteCharOffset;
+
+    fn add(self, other: CharOffset) -> AbsoluteCharOffset {
+        AbsoluteCharOffset(self.0 + other.0)
+    }
+}
+
+impl From<AbsoluteCharOffset> for CharOffset {
+    fn from(index: AbsoluteCharOffset) -> CharOffset {
+        CharOffset(index.0)
+    }
+}
 
 /// `offset` indicates a location before or after characters, not at the charaters.
 #[derive(Copy, Clone, Default, Eq, Hash)]
