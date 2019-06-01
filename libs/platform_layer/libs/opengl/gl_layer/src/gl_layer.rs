@@ -1,5 +1,6 @@
 // This file was split off of a file that was part of https://github.com/alexheretic/glyph-brush
 use gl::types::*;
+use glyph_brush::rusttype::Scale;
 use glyph_brush::*;
 use macros::{d, invariants_checked};
 use std::{ffi::CString, mem, ptr, str};
@@ -262,6 +263,7 @@ pub fn render(
     width: u32,
     height: u32,
     status_line_position: Option<(f32, f32)>,
+    status_scale: Scale,
     highlight_ranges: Vec<HighlightRange>,
 ) -> Res<()> {
     let dimensions = (width, height);
@@ -292,6 +294,7 @@ pub fn render(
                 transform_status_line,
                 extract_tex_coords,
                 status_line_position,
+                status_scale,
                 highlight_ranges: highlight_ranges.clone(),
             }),
         );

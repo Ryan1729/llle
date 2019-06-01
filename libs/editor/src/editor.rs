@@ -166,6 +166,11 @@ pub fn update_and_render(state: &mut State, input: Input) -> UpdateAndRenderOutp
                 b.move_all_cursors(r#move);
             }
         }
+        Input::ExtendSelectionForAllCursors(r#move) => {
+            if let Some(b) = state.current_buffer_mut() {
+                b.extend_selection_for_all_cursors(r#move);
+            }
+        }
         Input::ScrollVertically(amount) => {
             state.scroll_y -= amount;
         }

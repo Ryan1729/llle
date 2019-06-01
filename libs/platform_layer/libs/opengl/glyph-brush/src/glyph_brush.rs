@@ -119,6 +119,7 @@ pub struct AdditionalRects<V: Clone + 'static> {
     pub transform_status_line: fn(&mut V),
     pub extract_tex_coords: fn(&V) -> TexCoords,
     pub status_line_position: (f32, f32),
+    pub status_scale: Scale,
     pub highlight_ranges: Vec<HighlightRange>,
 }
 
@@ -292,18 +293,19 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphBrush<'font, V, H> {
                      transform_status_line,
                      extract_tex_coords,
                      status_line_position,
+                     status_scale,
                      highlight_ranges,
                  }| {
                     let section = Section {
                         // The status line will be a rectangle with the height of this glyph
                         //stretched horzontally across the screen.
                         text: "█",
-                        scale: Scale::uniform(11.0),
+                        scale: status_scale,
                         screen_position: status_line_position,
                         bounds: (std::f32::INFINITY, std::f32::INFINITY),
                         color: [7.0 / 256.0, 7.0 / 256.0, 7.0 / 256.0, 1.0],
                         layout: Layout::default_single_line(),
-                        z: 0.25,
+                        z: 0.1875,
                         ..Section::default()
                     }
                     .into();

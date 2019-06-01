@@ -38,25 +38,29 @@ impl MultiCursorBuffer for TextBuffer {
     }
 
     #[perf_viz::record]
-    fn move_all_cursors(&mut self, r#move: Move) {
-        for i in 0..self.cursors.len() {
-            self.move_cursor(i, r#move)
+    fn move_cursor(&mut self, index: usize, r#move: Move) {
+        if let Some(cursor) = self.cursors.get_mut(index) {
+            if let Some(p) = cursor.highlight_position {
+                let decreasing = match r#move {
+                    Move::Up | Move::Left | Move::ToLineStart | Move::ToBufferStart => true,
+                    Move::Down | Move::Right | Move::ToLineEnd | Move::ToBufferEnd => false,
+                };
+                if (decreasing && p > cursor.position) || (!decreasing && p < cursor.position) {
+                    cursor.highlight_position = None;
+                    return;
+                }
+            }
+
+            move_cursor_directly(&self.rope, cursor, r#move);
         }
     }
 
     #[perf_viz::record]
-    fn move_cursor(&mut self, index: usize, r#move: Move) {
+    fn extend_selection(&mut self, index: usize, r#move: Move) {
         if let Some(cursor) = self.cursors.get_mut(index) {
-            match r#move {
-                Move::Up => move_up(&self.rope, cursor),
-                Move::Down => move_down(&self.rope, cursor),
-                Move::Left => move_left(&self.rope, cursor),
-                Move::Right => move_right(&self.rope, cursor),
-                Move::ToLineStart => move_to_line_start(&self.rope, cursor),
-                Move::ToLineEnd => move_to_line_end(&self.rope, cursor),
-                Move::ToBufferStart => move_to_rope_start(&self.rope, cursor),
-                Move::ToBufferEnd => move_to_rope_end(&self.rope, cursor),
-            }
+            set_selection_to_here_if_not_set(cursor);
+
+            move_cursor_directly(&self.rope, cursor, r#move);
         }
     }
 
@@ -105,6 +109,19 @@ fn pos_to_char_offset(rope: &Rope, position: &Position) -> Option<CharOffset> {
 enum Moved {
     No,
     Yes,
+}
+
+fn move_cursor_directly(rope: &Rope, cursor: &mut Cursor, r#move: Move) {
+    match r#move {
+        Move::Up => move_up(rope, cursor),
+        Move::Down => move_down(rope, cursor),
+        Move::Left => move_left(rope, cursor),
+        Move::Right => move_right(rope, cursor),
+        Move::ToLineStart => move_to_line_start(rope, cursor),
+        Move::ToLineEnd => move_to_line_end(rope, cursor),
+        Move::ToBufferStart => move_to_rope_start(rope, cursor),
+        Move::ToBufferEnd => move_to_rope_end(rope, cursor),
+    }
 }
 
 #[perf_viz::record]
@@ -209,6 +226,12 @@ fn move_to_rope_end(rope: &Rope, cursor: &mut Cursor) {
     if let Some((line, offset)) = last_line_index_and_count(rope) {
         let new_position = Position { line, offset };
         move_to(rope, cursor, new_position);
+    }
+}
+
+fn set_selection_to_here_if_not_set(cursor: &mut Cursor) {
+    if cursor.highlight_position.is_none() {
+        cursor.highlight_position = Some(cursor.position);
     }
 }
 

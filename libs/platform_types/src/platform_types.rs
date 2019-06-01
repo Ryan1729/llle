@@ -37,6 +37,7 @@ pub enum Input {
     SetSizes(Sizes),
     SetMousePos(ScreenSpaceXY),
     MoveAllCursors(Move),
+    ExtendSelectionForAllCursors(Move),
     ReplaceCursors(ScreenSpaceXY),
 }
 

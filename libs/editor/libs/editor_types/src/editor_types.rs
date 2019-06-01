@@ -66,7 +66,11 @@ impl Cursor {
             position,
             sticky_offset: position.offset,
             //highlight_position: None,
-            highlight_position: Some({let mut p: Position = d!(); p.offset +=1; p }), // for testing
+            highlight_position: Some({
+                let mut p: Position = d!();
+                p.offset += 1;
+                p
+            }), // for testing
         }
     }
 }
@@ -89,9 +93,21 @@ pub trait MultiCursorBuffer: Borrow<Vec1<Cursor>> + BorrowMut<Vec1<Cursor>> {
 
     fn delete(&mut self);
 
-    fn move_all_cursors(&mut self, r#move: Move);
+    fn move_all_cursors(&mut self, r#move: Move) {
+        for i in 0..self.cursors().len() {
+            self.move_cursor(i, r#move)
+        }
+    }
 
     fn move_cursor(&mut self, index: usize, r#move: Move);
+
+    fn extend_selection_for_all_cursors(&mut self, r#move: Move) {
+        for i in 0..self.cursors().len() {
+            self.extend_selection(i, r#move)
+        }
+    }
+
+    fn extend_selection(&mut self, index: usize, r#move: Move);
 
     fn in_bounds<P: Borrow<Position>>(&self, position: P) -> bool {
         self.find_index(position) != None

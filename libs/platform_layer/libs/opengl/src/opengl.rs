@@ -171,7 +171,12 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                             KeyboardInput {
                                 state: ElementState::Pressed,
                                 virtual_keycode: Some(keypress),
-                                modifiers: ModifiersState { ctrl: true, .. },
+                                modifiers:
+                                    ModifiersState {
+                                        ctrl: true,
+                                        shift: false,
+                                        ..
+                                    },
                                 ..
                             },
                         ..
@@ -192,7 +197,35 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                             KeyboardInput {
                                 state: ElementState::Pressed,
                                 virtual_keycode: Some(keypress),
-                                modifiers: ModifiersState { ctrl: false, .. },
+                                modifiers:
+                                    ModifiersState {
+                                        ctrl: true,
+                                        shift: true,
+                                        ..
+                                    },
+                                ..
+                            },
+                        ..
+                    } => match keypress {
+                        VirtualKeyCode::Home => {
+                            call_u_and_r!(Input::ExtendSelectionForAllCursors(Move::ToBufferStart));
+                        }
+                        VirtualKeyCode::End => {
+                            call_u_and_r!(Input::ExtendSelectionForAllCursors(Move::ToBufferEnd));
+                        }
+                        _ => (),
+                    },
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Pressed,
+                                virtual_keycode: Some(keypress),
+                                modifiers:
+                                    ModifiersState {
+                                        ctrl: false,
+                                        shift: false,
+                                        ..
+                                    },
                                 ..
                             },
                         ..
@@ -220,6 +253,41 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                         }
                         VirtualKeyCode::End => {
                             call_u_and_r!(Input::MoveAllCursors(Move::ToLineEnd));
+                        }
+                        _ => (),
+                    },
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Pressed,
+                                virtual_keycode: Some(keypress),
+                                modifiers:
+                                    ModifiersState {
+                                        ctrl: false,
+                                        shift: true,
+                                        ..
+                                    },
+                                ..
+                            },
+                        ..
+                    } => match keypress {
+                        VirtualKeyCode::Up => {
+                            call_u_and_r!(Input::ExtendSelectionForAllCursors(Move::Up));
+                        }
+                        VirtualKeyCode::Down => {
+                            call_u_and_r!(Input::ExtendSelectionForAllCursors(Move::Down));
+                        }
+                        VirtualKeyCode::Left => {
+                            call_u_and_r!(Input::ExtendSelectionForAllCursors(Move::Left));
+                        }
+                        VirtualKeyCode::Right => {
+                            call_u_and_r!(Input::ExtendSelectionForAllCursors(Move::Right));
+                        }
+                        VirtualKeyCode::Home => {
+                            call_u_and_r!(Input::ExtendSelectionForAllCursors(Move::ToLineStart));
+                        }
+                        VirtualKeyCode::End => {
+                            call_u_and_r!(Input::ExtendSelectionForAllCursors(Move::ToLineEnd));
                         }
                         _ => (),
                     },
