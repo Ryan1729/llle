@@ -128,90 +128,24 @@ fn pos_to_char_offset(rope: &Rope, position: &Position) -> Option<AbsoluteCharOf
 }
 
 #[perf_viz::record]
-fn char_offset_to_pos(rope: &Rope, offset: &AbsoluteCharOffset) -> Option<Position> {
-    None //TODO
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use proptest::prelude::*;
-    use proptest::{prop_compose, proptest};
-
-    macro_rules! r {
-        ($s:expr) => {
-            Rope::from_str(&$s)
-        };
+fn char_offset_to_pos(
+    rope: &Rope,
+    AbsoluteCharOffset(offset): &AbsoluteCharOffset,
+) -> Option<Position> {
+    let offset = *offset;
+    if rope.len_chars() == offset {
+        Some(rope.len_lines() - 1)
+    } else {
+        dbg!(rope.char_to_line(offset))
     }
+    .and_then(|line_index| {
+        let start_of_line = dbg!(rope.line_to_char(line_index))?;
 
-    prop_compose! {
-        fn arb_rope()(s in any::<String>()) -> Rope {
-            r!(&s)
-        }
-    }
-
-    prop_compose! {
-        fn arb_absolute_char_offset(max_len: usize)(offset in 0..max_len) -> AbsoluteCharOffset {
-            AbsoluteCharOffset(offset)
-        }
-    }
-
-    prop_compose! {
-        fn vec_and_index()(vec in prop::collection::vec(".*", 1..100))
-                        (index in 0..vec.len(), vec in Just(vec))
-                        -> (Vec<String>, usize) {
-           (vec, index)
-       }
-    }
-
-    prop_compose! {
-        fn arb_rope_and_offset()
-            (s in ".*")
-            (offset in 0..r!(&s).len_chars(), s in Just(s)) -> (Rope, AbsoluteCharOffset) {
-            (Rope::from_str(&s), AbsoluteCharOffset(offset))
-        }
-    }
-
-    // Lifetimes!
-    fn arb_rope_and_pos() -> impl Strategy<Value = (Rope, Position)> {
-        ".*".prop_flat_map(|s: String| {
-            (0..r!(s).len_lines(), Just(s)).prop_flat_map(|(line_index, s)| {
-                let line_len = r!(s)
-                    .lines()
-                    .nth(line_index)
-                    //The index comes from `len_lines()` so it should always produce a `Some`!
-                    .unwrap()
-                    .len_chars();
-
-                ((0..=line_len), Just(s)).prop_map(move |(offset, s)| {
-                    (
-                        r!(s),
-                        Position {
-                            line: line_index,
-                            offset: CharOffset(offset),
-                        },
-                    )
-                })
-            })
+        offset.checked_sub(start_of_line).map(|o| Position {
+            line: line_index,
+            offset: CharOffset(o),
         })
-    }
-
-    proptest! {
-        #[test]
-        fn char_offset_to_pos_to_char_offset((rope, offset) in arb_rope_and_offset()) {
-            if let Some(p) = char_offset_to_pos(&rope, &offset) {
-                assert_eq!(pos_to_char_offset(&rope, &p), Some(offset))
-            }
-        }
-
-        #[test]
-        fn pos_to_to_char_offset_to_pos((rope, pos) in arb_rope_and_pos()) {
-            if let Some(o) = pos_to_char_offset(&rope, &pos) {
-                assert_eq!(char_offset_to_pos(&rope, &o), Some(pos))
-            }
-        }
-    }
-
+    })
 }
 
 enum Moved {
@@ -391,3 +325,6 @@ where
 
     new
 }
+
+#[cfg(test)]
+mod tests;
