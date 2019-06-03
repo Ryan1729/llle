@@ -129,7 +129,7 @@ impl Rope {
     #[inline]
     pub fn char_to_line(&self, char_idx: usize) -> Option<usize> {
         some_if!(
-            char_idx <= self.len_lines() => self.rope.char_to_line(char_idx)
+            char_idx <= self.len_chars() => self.rope.char_to_line(char_idx)
         )
     }
 

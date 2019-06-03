@@ -29,10 +29,10 @@ prop_compose! {
     }
 }
 
-// Lifetimes!
 fn arb_rope_and_pos() -> impl Strategy<Value = (Rope, Position)> {
     ".*".prop_flat_map(|s: String| {
-        (0..r!(s).len_lines(), Just(s)).prop_flat_map(|(line_index, s)| {
+        let line_count = r!(s).len_lines();
+        (0..line_count, Just(s)).prop_flat_map(move |(line_index, s)| {
             let line_len = r!(s)
                 .lines()
                 .nth(line_index)
@@ -40,7 +40,9 @@ fn arb_rope_and_pos() -> impl Strategy<Value = (Rope, Position)> {
                 .unwrap()
                 .len_chars();
 
-            ((0..=line_len), Just(s)).prop_map(move |(offset, s)| {
+            let max_offset = line_len - if line_index < line_count - 1 { 1 } else { 0 };
+
+            (0..=max_offset, Just(s)).prop_map(move |(offset, s)| {
                 (
                     r!(s),
                     Position {
@@ -51,6 +53,31 @@ fn arb_rope_and_pos() -> impl Strategy<Value = (Rope, Position)> {
             })
         })
     })
+}
+
+#[test]
+fn offset_at_end_of_line_works() {
+    let rope = r!("\u{b}");
+
+    assert_eq!(
+        pos_to_char_offset(&rope, &pos! {l 1 o 0}),
+        Some(AbsoluteCharOffset(1))
+    );
+
+    assert_eq!(
+        char_offset_to_pos(&rope, &AbsoluteCharOffset(1)),
+        Some(pos! {l 1 o 0})
+    )
+}
+
+#[test]
+fn offset_in_middle_of_single_line_with_non_ascii_works() {
+    let rope = r!("0¡¡");
+
+    assert_eq!(
+        char_offset_to_pos(&rope, &AbsoluteCharOffset(2)),
+        Some(pos! {l 0 o 2})
+    )
 }
 
 #[test]
