@@ -13,13 +13,41 @@ pub struct TextBuffer {
 borrow!(<Vec1<Cursor>> for TextBuffer : s in &s.cursors);
 borrow_mut!(<Vec1<Cursor>> for TextBuffer : s in &mut s.cursors);
 
+fn offset_pair(
+    rope: &Rope,
+    cursor: &Cursor,
+) -> (Option<AbsoluteCharOffset>, Option<AbsoluteCharOffset>) {
+    (
+        pos_to_char_offset(rope, &cursor.position),
+        cursor
+            .highlight_position
+            .and_then(|p| pos_to_char_offset(rope, &p)),
+    )
+}
+
 impl MultiCursorBuffer for TextBuffer {
     #[perf_viz::record]
     fn insert(&mut self, ch: char) {
         for cursor in &mut self.cursors {
-            if let Some(AbsoluteCharOffset(o)) = pos_to_char_offset(&self.rope, &cursor.position) {
-                self.rope.insert_char(o, ch);
-                move_right(&self.rope, cursor);
+            match offset_pair(&self.rope, cursor) {
+                (Some(AbsoluteCharOffset(o)), highlight)
+                    if highlight.is_none() || Some(AbsoluteCharOffset(o)) == highlight =>
+                {
+                    self.rope.insert_char(o, ch);
+                    move_right(&self.rope, cursor);
+                }
+                (Some(o1), Some(o2)) => {
+                    let min = std::cmp::min(o1, o2);
+                    let max = std::cmp::max(o1, o2);
+
+                    self.rope.remove(dbg!(min.0..max.0));
+                    cursor.position = char_offset_to_pos(&self.rope, &min).unwrap_or_default();
+                    cursor.highlight_position = None;
+
+                    self.rope.insert_char(o1.0, ch);
+                    move_right(&self.rope, cursor);
+                }
+                _ => {}
             }
         }
     }
@@ -27,16 +55,7 @@ impl MultiCursorBuffer for TextBuffer {
     #[perf_viz::record]
     fn delete(&mut self) {
         for cursor in &mut self.cursors {
-            let pair = {
-                let rope = &self.rope;
-                (
-                    pos_to_char_offset(rope, &cursor.position),
-                    cursor
-                        .highlight_position
-                        .and_then(|p| pos_to_char_offset(rope, &p)),
-                )
-            };
-            match pair {
+            match offset_pair(&self.rope, cursor) {
                 (Some(AbsoluteCharOffset(o)), None) if o > 0 => {
                     self.rope.remove((o - 1)..o);
                     move_left(&self.rope, cursor);
