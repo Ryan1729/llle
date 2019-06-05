@@ -145,3 +145,48 @@ proptest! {
         }
     }
 }
+
+#[test]
+fn insertion_with_forward_selection_deletes_selected_text() {
+    // Arrange
+    let mut buffer: TextBuffer = d!();
+    buffer.insert('1');
+    buffer.insert('2');
+    buffer.insert('5'); // We will attempt to fix this as part of the test
+    buffer.insert('4');
+
+    // TODO move these sanity checks into a separate test?
+    {
+        let c = buffer.cursors.first();
+        assert_eq!(c.highlight_position, None);
+        assert_eq!(c.position, pos! {l 0 o 4});
+    }
+
+    buffer.move_cursor(0, Move::Left);
+    buffer.move_cursor(0, Move::Left);
+
+    {
+        let c = buffer.cursors.first();
+        assert_eq!(c.highlight_position, None);
+        assert_eq!(c.position, pos! {l 0 o 2});
+    }
+
+    buffer.extend_selection(0, Move::Right);
+
+    {
+        let c = buffer.cursors.first();
+        assert_eq!(c.highlight_position, Some(pos! {l 0 o 2}));
+        assert_eq!(c.position, pos! {l 0 o 3});
+    }
+
+    // Act
+    buffer.insert('3');
+
+    // Assert
+    let s: String = buffer.rope.into();
+    assert_eq!(s, "1234");
+
+    let c = buffer.cursors.first();
+    assert_eq!(c.highlight_position, None);
+    assert_eq!(c.position, pos! {l 0 o 3});
+}

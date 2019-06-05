@@ -137,15 +137,20 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphBrush<'font, V, H> {
         G: GlyphPositioner,
         S: Into<Cow<'a, VariedSection<'a>>>,
     {
+        perf_viz::record_guard!("queue_custom_layout");
         let section = section.into();
         if cfg!(debug_assertions) {
             for text in &section.text {
                 assert!(self.fonts.len() > text.font_id.0, "Invalid font id");
             }
         }
+        perf_viz::start_record!("cache_glyphs");
         let section_hash = self.cache_glyphs(&section, custom_layout);
+        perf_viz::end_record!("cache_glyphs");
+        perf_viz::start_record!("add to cache");
         self.section_buffer.push(section_hash);
         self.keep_in_cache.insert(section_hash);
+        perf_viz::end_record!("add to cache");
     }
 
     /// Queues a section/layout to be processed by the next call of
@@ -186,6 +191,7 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphBrush<'font, V, H> {
         self.frame_seq_id_sections.push(section_hash);
 
         if self.cache_glyph_positioning {
+            perf_viz::record_guard!("if self.cache_glyph_positioning");
             if !self.calculate_glyph_cache.contains_key(&section_hash.full) {
                 let geometry = SectionGeometry::from(section);
 
@@ -230,6 +236,7 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphBrush<'font, V, H> {
                 );
             }
         } else {
+            perf_viz::record_guard!("if not self.cache_glyph_positioning");
             let geometry = SectionGeometry::from(section);
             self.calculate_glyph_cache.insert(
                 section_hash.full,
@@ -439,7 +446,7 @@ impl<'font, V: Clone + 'static, H: BuildHasher> GlyphBrush<'font, V, H> {
                                 bounds,
                                 color,
                                 z,
-                            } = if_changed::dbg!(range);
+                            } = range;
                             verts.push(to_vertex(GlyphVertex {
                                 tex_coords,
                                 pixel_coords,

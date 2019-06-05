@@ -364,8 +364,9 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
             }
 
             perf_viz::record_guard!("glyph_brush.queue");
-            glyph_brush.queue(Section {
-                text: &chars
+            let text = {
+                perf_viz::record_guard!("map unprinatbles to symbols for themselves");
+                let s = chars
                     .chars()
                     .map(|c| {
                         // map unprinatbles to symbols for themselves
@@ -375,7 +376,11 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                             c
                         }
                     })
-                    .collect::<String>(),
+                    .collect::<String>();
+                s
+            };
+            glyph_brush.queue(Section {
+                text: &text,
                 scale: if let BufferViewKind::StatusLine = kind {
                     status_scale
                 } else {
@@ -396,6 +401,7 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
             let mut rect_bounds: Bounds = d!();
             rect_bounds.max = bounds.into();
 
+            perf_viz::start_record!("highlight_ranges.extend");
             highlight_ranges.extend(highlights.iter().map(|h| {
                 let (min, max) = h.get();
 
@@ -407,13 +413,14 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                     (max.offset.0 as f32 * text_char_dim.w + screen_position.0) as i32;
                 pixel_coords.max.y = (text_char_dim.h + screen_position.1) as i32;
 
-                if_changed::dbg!(HighlightRange {
+                HighlightRange {
                     pixel_coords,
                     bounds: rect_bounds,
                     color: [0.0, 0.0, 0.0, 0.6],
                     z: gl_layer::HIGHLIGHT_Z,
-                })
+                }
             }));
+            perf_viz::end_record!("highlight_ranges.extend");
         }
         perf_viz::end_record!("for &BufferView");
 

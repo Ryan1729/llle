@@ -40,11 +40,11 @@ impl MultiCursorBuffer for TextBuffer {
                     let min = std::cmp::min(o1, o2);
                     let max = std::cmp::max(o1, o2);
 
-                    self.rope.remove(dbg!(min.0..max.0));
+                    self.rope.remove(min.0..max.0);
                     cursor.position = char_offset_to_pos(&self.rope, &min).unwrap_or_default();
                     cursor.highlight_position = None;
 
-                    self.rope.insert_char(o1.0, ch);
+                    self.rope.insert_char(min.0, ch);
                     move_right(&self.rope, cursor);
                 }
                 _ => {}
@@ -81,10 +81,11 @@ impl MultiCursorBuffer for TextBuffer {
                     Move::Up | Move::Left | Move::ToLineStart | Move::ToBufferStart => true,
                     Move::Down | Move::Right | Move::ToLineEnd | Move::ToBufferEnd => false,
                 };
-                if (decreasing && p > cursor.position) || (!decreasing && p < cursor.position) {
-                    cursor.highlight_position = None;
-                    return;
+                cursor.highlight_position = None;
+                if (decreasing && p <= cursor.position) || (!decreasing && p >= cursor.position) {
+                    cursor.position = p;
                 }
+                return;
             }
 
             move_cursor_directly(&self.rope, cursor, r#move);
