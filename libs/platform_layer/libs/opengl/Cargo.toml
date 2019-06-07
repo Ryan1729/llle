@@ -30,3 +30,11 @@ spin_sleep = "0.3"
 [features]
 default = []
 invariant-checking = []
+
+[dev-dependencies]
+criterion = "0.2"
+editor = { path = "../../../editor" }
+
+[[bench]]
+name = "rendering"
+harness = false

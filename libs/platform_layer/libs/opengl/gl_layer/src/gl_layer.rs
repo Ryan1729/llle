@@ -252,6 +252,12 @@ pub fn set_dimensions(width: i32, height: i32) {
     }
 }
 
+pub struct RenderExtras {
+    pub status_line_position: Option<(f32, f32)>,
+    pub status_scale: Scale,
+    pub highlight_ranges: Vec<HighlightRange>,
+}
+
 #[perf_viz::record]
 pub fn render(
     State {
@@ -262,9 +268,11 @@ pub fn render(
     glyph_brush: &mut GlyphBrush<Vertex>,
     width: u32,
     height: u32,
-    status_line_position: Option<(f32, f32)>,
-    status_scale: Scale,
-    highlight_ranges: Vec<HighlightRange>,
+    RenderExtras {
+        status_line_position,
+        status_scale,
+        highlight_ranges,
+    }: RenderExtras,
 ) -> Res<()> {
     let dimensions = (width, height);
     let mut brush_action;
