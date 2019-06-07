@@ -10,6 +10,26 @@ pub struct TextBuffer {
     cursors: Vec1<Cursor>,
 }
 
+impl From<String> for TextBuffer {
+    fn from(s: String) -> Self {
+        let mut output: Self = d!();
+
+        output.rope = Rope::from(s);
+
+        output
+    }
+}
+
+impl From<&str> for TextBuffer {
+    fn from(s: &str) -> Self {
+        let mut output: Self = d!();
+
+        output.rope = Rope::from(s);
+
+        output
+    }
+}
+
 borrow!(<Vec1<Cursor>> for TextBuffer : s in &s.cursors);
 borrow_mut!(<Vec1<Cursor>> for TextBuffer : s in &mut s.cursors);
 

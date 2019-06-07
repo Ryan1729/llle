@@ -29,10 +29,34 @@ impl State {
     fn current_buffer_mut(&mut self) -> Option<&mut TextBuffer> {
         self.buffers.get_mut(self.current_burrer_index)
     }
+
+    pub fn new() -> State {
+        d!()
+    }
 }
 
 pub fn new() -> State {
     d!()
+}
+
+impl From<String> for State {
+    fn from(s: String) -> Self {
+        let mut output: Self = d!();
+
+        output.buffers = Vec1::new(TextBuffer::from(s));
+
+        output
+    }
+}
+
+impl From<&str> for State {
+    fn from(s: &str) -> Self {
+        let mut output: Self = d!();
+
+        output.buffers = Vec1::new(TextBuffer::from(s));
+
+        output
+    }
 }
 
 #[perf_viz::record]

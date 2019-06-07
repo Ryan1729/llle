@@ -28,3 +28,10 @@ path = "libs/editor_types"
 
 [dependencies.text_buffer]
 path = "libs/text_buffer"
+
+[dev-dependencies]
+criterion = "0.2"
+
+[[bench]]
+name = "user_input"
+harness = false
