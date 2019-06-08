@@ -33,7 +33,7 @@ pub type Res<T> = Result<T, Box<std::error::Error>>;
 ///     override_alpha
 /// ]
 /// ```
-type Vertex = [GLfloat; 14];
+pub type Vertex = [GLfloat; 14];
 
 fn transform_status_line(vertex: &mut Vertex) {
     let max_x = &mut vertex[3];
@@ -252,6 +252,7 @@ pub fn set_dimensions(width: i32, height: i32) {
     }
 }
 
+#[derive(Clone)]
 pub struct RenderExtras {
     pub status_line_position: Option<(f32, f32)>,
     pub status_scale: Scale,
