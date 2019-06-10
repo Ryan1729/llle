@@ -759,7 +759,7 @@ impl<'font> Cache<'font> {
                 perf_viz::start_record!("if queue_success");
                 let glyph_count = draw_and_upload.len();
 
-                if self.multithread && glyph_count > 1 {
+                if self.multithread && dbg!(glyph_count) > 1 {
                     perf_viz::record_guard!("multithread rasterization");
                     // multithread rasterization
                     use crossbeam_deque::Steal;
@@ -776,7 +776,9 @@ impl<'font> Cache<'font> {
                         rasterize_queue.push(el);
                     }
                     crossbeam_utils::thread::scope(|scope| {
+                        perf_viz::record_guard!("crossbeam_utils::thread::scope");
                         for _ in 0..num_cpus::get().min(glyph_count).saturating_sub(1) {
+                            perf_viz::record_guard!("num_cpus::get()");
                             let rasterize_queue = &rasterize_queue;
                             let to_main = to_main.clone();
                             scope.spawn(move |_| loop {
@@ -794,16 +796,22 @@ impl<'font> Cache<'font> {
 
                         let mut workers_finished = false;
                         loop {
+                            perf_viz::record_guard!("workers_finished outer loop");
                             match rasterize_queue.steal() {
                                 Steal::Success((tex_coords, glyph)) => {
+                                    perf_viz::start_record!("workers_finished draw_glyph");
                                     let pixels = draw_glyph(tex_coords, glyph, pad_glyphs);
+                                    perf_viz::end_record!("workers_finished draw_glyph");
+                                    perf_viz::start_record!("workers_finished uploader");
                                     uploader(tex_coords, pixels.as_slice());
+                                    perf_viz::end_record!("workers_finished uploader");
                                 }
                                 Steal::Empty if workers_finished => break,
                                 Steal::Empty | Steal::Retry => {}
                             }
 
                             while !workers_finished {
+                                perf_viz::record_guard!("while !workers_finished loop");
                                 match from_stealers.try_recv() {
                                     Ok((tex_coords, pixels)) => {
                                         uploader(tex_coords, pixels.as_slice())

@@ -373,6 +373,9 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
         let height = dimensions.height as f32;
 
         {
+            use std::time::Instant;
+            let now = Instant::now();
+
             let extras = render_buffer_view(&mut glyph_brush, &view, &font_info);
 
             gl_layer::render(
@@ -382,7 +385,13 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                 height as _,
                 extras,
             )?;
+
+            let time = now.elapsed().as_micros();
+            if time >= 1000 {
+                println!("{}", time);
+            }
         }
+
         window.swap_buffers()?;
 
         if let Some(rate) = loop_helper.report_rate() {
@@ -390,7 +399,7 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                 "{} {:.0} FPS {:?}",
                 title,
                 rate,
-                (mouse_x, mouse_y)
+                (mouse_x, mouse_y),
             ));
         }
 

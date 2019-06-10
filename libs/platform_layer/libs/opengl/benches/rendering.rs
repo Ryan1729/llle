@@ -37,7 +37,7 @@ fn render_frame(
     (gl_state, glyph_brush, window, extras): (
         &mut gl_layer::State,
         &mut GlyphBrush<Vertex>,
-        &mut glutin::WindowedContext,
+        &glutin::WindowedContext,
         RenderExtras,
     ),
 ) {
@@ -74,7 +74,7 @@ fn gl_layer_benchmark(c: &mut Criterion) {
             || {
                 let font_info = FontInfo::new(2.0).unwrap();
 
-                let mut window = get_windowed_context();
+                let window = get_windowed_context();
 
                 let mut glyph_brush: GlyphBrush<Vertex> = get_glyph_brush(&font_info);
 
@@ -94,7 +94,7 @@ fn gl_layer_benchmark(c: &mut Criterion) {
                         render_buffer_view(&mut glyph_brush, &full_highlight_view, &font_info);
 
                     // fill the glyph cache
-                    render_frame((&mut gl_state, &mut glyph_brush, &mut window, extras))
+                    render_frame((&mut gl_state, &mut glyph_brush, &window, extras))
                 }
 
                 let (no_highlight_view, _) =
@@ -103,8 +103,8 @@ fn gl_layer_benchmark(c: &mut Criterion) {
 
                 (gl_state, glyph_brush, window, extras)
             },
-            |(mut gl_state, mut glyph_brush, mut window, extras)| {
-                render_frame((&mut gl_state, &mut glyph_brush, &mut window, extras))
+            |(mut gl_state, mut glyph_brush, window, extras)| {
+                render_frame((&mut gl_state, &mut glyph_brush, &window, extras))
             },
             BatchSize::LargeInput,
         )
@@ -115,7 +115,7 @@ fn gl_layer_benchmark(c: &mut Criterion) {
             || {
                 let font_info = FontInfo::new(2.0).unwrap();
 
-                let mut window = get_windowed_context();
+                let window = get_windowed_context();
 
                 let mut glyph_brush: GlyphBrush<Vertex> = get_glyph_brush(&font_info);
 
@@ -134,7 +134,7 @@ fn gl_layer_benchmark(c: &mut Criterion) {
                         render_buffer_view(&mut glyph_brush, &full_highlight_view, &font_info);
 
                     // fill the glyph cache
-                    render_frame((&mut gl_state, &mut glyph_brush, &mut window, extras))
+                    render_frame((&mut gl_state, &mut glyph_brush, &window, extras))
                 }
 
                 {
@@ -144,14 +144,14 @@ fn gl_layer_benchmark(c: &mut Criterion) {
                         render_buffer_view(&mut glyph_brush, &no_highlight_view, &font_info);
 
                     // remove highlight frame from cache
-                    render_frame((&mut gl_state, &mut glyph_brush, &mut window, extras));
+                    render_frame((&mut gl_state, &mut glyph_brush, &window, extras));
                 }
 
                 let extras = render_buffer_view(&mut glyph_brush, &full_highlight_view, &font_info);
                 (gl_state, glyph_brush, window, extras)
             },
-            |(mut gl_state, mut glyph_brush, mut window, extras)| {
-                render_frame((&mut gl_state, &mut glyph_brush, &mut window, extras))
+            |(mut gl_state, mut glyph_brush, window, extras)| {
+                render_frame((&mut gl_state, &mut glyph_brush, &window, extras))
             },
             BatchSize::LargeInput,
         )

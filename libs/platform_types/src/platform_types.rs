@@ -205,7 +205,7 @@ impl PartialEq for Position {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct View {
     pub buffers: Vec<BufferView>,
 }
@@ -219,6 +219,7 @@ pub enum BufferViewKind {
 
 d!(for BufferViewKind: BufferViewKind::Cursor);
 
+#[derive(Debug)]
 pub struct Highlight {
     min: Position,
     max: Position,
@@ -237,7 +238,7 @@ impl Highlight {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct BufferView {
     pub kind: BufferViewKind,
     pub screen_position: (f32, f32),
@@ -248,6 +249,7 @@ pub struct BufferView {
     pub highlights: Vec<Highlight>,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum Cmd {
     NoCmd, //The plan is to communicate things like saving to the platform layer with this
 }
