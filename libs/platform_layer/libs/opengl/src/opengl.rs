@@ -4,7 +4,7 @@
 // (at commit 90e7c7c331e9f991e11de6404b2ca073c0a09e61)
 use gl_layer::RenderExtras;
 use glutin::dpi::LogicalPosition;
-use glutin::{Api, ContextTrait, GlProfile, GlRequest};
+use glutin::{Api, GlProfile, GlRequest};
 use glyph_brush::{rusttype::Error as FontError, rusttype::Font, rusttype::Scale, *};
 use macros::d;
 
@@ -93,24 +93,28 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
     let mut events = glutin::EventsLoop::new();
     let title = "rote";
 
-    let window = glutin::WindowedContext::new_windowed(
-        glutin::WindowBuilder::new()
-            .with_dimensions((1024, 576).into())
-            .with_title(title),
-        glutin::ContextBuilder::new()
-            .with_gl_profile(GlProfile::Core)
-            .with_gl(GlRequest::Specific(Api::OpenGl, (3, 2)))
-            .with_srgb(true),
-        &events,
-    )?;
-    unsafe { window.make_current()? };
+    let glutin_context = glutin::ContextBuilder::new()
+        .with_gl_profile(GlProfile::Core)
+        //As of now we only need 3.3 for GL_TIME_ELAPSED. Otherwise we could use 3.2.
+        .with_gl(GlRequest::Specific(Api::OpenGl, (3, 3)))
+        .with_srgb(true)
+        .build_windowed(
+            glutin::WindowBuilder::new()
+                .with_dimensions((1024, 576).into())
+                .with_title(title),
+            &events,
+        )?;
+    let glutin_context = unsafe { glutin_context.make_current().map_err(|(_, e)| e)? };
+    let window = glutin_context.window();
 
     let scroll_multiplier: f32 = 16.0;
     let font_info = FontInfo::new(window.get_hidpi_factor() as f32)?;
 
     let mut glyph_brush = get_glyph_brush(&font_info);
 
-    let mut gl_state = gl_layer::init(&glyph_brush, |symbol| window.get_proc_address(symbol) as _)?;
+    let mut gl_state = gl_layer::init(&glyph_brush, |symbol| {
+        glutin_context.get_proc_address(symbol) as _
+    })?;
 
     let mut loop_helper = spin_sleep::LoopHelper::builder().build_with_target_rate(250.0);
     let mut running = true;
@@ -148,16 +152,22 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
         })
         .expect("Could not start editor thread!");
 
+    let mut called_u_and_r = Vec::with_capacity(32);
+    let mut updated = false;
+
     while running {
         loop_helper.loop_start();
 
         perf_viz::start_record!("while running");
+        let poll_events_now = std::time::Instant::now();
         events.poll_events(|event| {
             perf_viz::record_guard!("events.poll_events");
             use glutin::*;
             if let Event::WindowEvent { event, .. } = event {
+                let now = std::time::Instant::now();
                 macro_rules! call_u_and_r {
                     ($input:expr) => {
+                        called_u_and_r.push(($input, now));
                         let _hope_it_gets_there = in_tx.send($input);
                     };
                 }
@@ -169,12 +179,25 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                     }};
                 }
 
+                match &event {
+                    &WindowEvent::KeyboardInput { ref input, .. } => {
+                        println!(
+                            "{:?}",
+                            (
+                                input.virtual_keycode.unwrap_or(VirtualKeyCode::WebStop),
+                                input.state
+                            )
+                        );
+                    }
+                    _ => {}
+                }
+
                 use platform_types::Move;
                 match event {
                     WindowEvent::CloseRequested => quit!(),
                     WindowEvent::Resized(size) => {
                         let dpi = window.get_hidpi_factor();
-                        window.resize(size.to_physical(dpi));
+                        glutin_context.resize(size.to_physical(dpi));
                         if let Some(ls) = window.get_inner_size() {
                             dimensions = ls.to_physical(dpi);
                             call_u_and_r!(Input::SetSizes(Sizes! {
@@ -358,10 +381,17 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                 }
             }
         });
+        {
+            let t = poll_events_now.elapsed().as_micros();
+            if t >= 1000 {
+                println!("poll {:?}, len {}", t, called_u_and_r.len());
+            }
+        }
 
         if running {
             match out_rx.try_recv() {
                 Ok((v, c)) => {
+                    updated = true;
                     view = v;
                     _cmd = c;
                 }
@@ -369,13 +399,12 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
             };
         }
 
+        let render_now = std::time::Instant::now();
+
         let width = dimensions.width as u32;
         let height = dimensions.height as f32;
 
         {
-            use std::time::Instant;
-            let now = Instant::now();
-
             let extras = render_buffer_view(&mut glyph_brush, &view, &font_info);
 
             gl_layer::render(
@@ -385,20 +414,29 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                 height as _,
                 extras,
             )?;
-
-            let time = now.elapsed().as_micros();
-            if time >= 1000 {
-                println!("{}", time);
-            }
         }
 
-        window.swap_buffers()?;
+        glutin_context.swap_buffers()?;
+        let render_elapsed = render_now.elapsed().as_micros();
+        if render_elapsed >= 1000 {
+            println!("render_now {:?}", render_elapsed);
+        }
+
+        if updated {
+            let times = called_u_and_r
+                .iter()
+                .map(|(input, instant)| (input, instant.elapsed().as_micros()))
+                .collect::<Vec<_>>();
+            println!("{:?}", times,);
+            called_u_and_r.clear();
+            updated = false;
+        }
 
         if let Some(rate) = loop_helper.report_rate() {
             window.set_title(&format!(
                 "{} {:.0} FPS {:?}",
                 title,
-                rate,
+                if_changed::dbg!(rate),
                 (mouse_x, mouse_y),
             ));
         }

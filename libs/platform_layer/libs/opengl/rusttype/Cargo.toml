@@ -39,6 +39,7 @@ num_cpus = { version = "1.0", optional = true }
 
 perf_viz = { path = "../../../../perf_viz" }
 macros = { path = "../../../../macros" }
+if_changed = { path = "../../../../if_changed" }
 
 [dev-dependencies]
 glium = "0.23"

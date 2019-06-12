@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
-use glutin::{Api, ContextTrait, GlProfile, GlRequest};
+use glutin::{Api, GlProfile, GlRequest};
 use glyph_brush::GlyphBrush;
 
 use editor::{update_and_render, State};
@@ -33,11 +33,13 @@ fn render_buffer_view_benchmark(c: &mut Criterion) {
 
 const SCREEN_SIZE: u32 = 2048;
 
+type Window = glutin::WindowedContext<glutin::PossiblyCurrent>;
+
 fn render_frame(
     (gl_state, glyph_brush, window, extras): (
         &mut gl_layer::State,
         &mut GlyphBrush<Vertex>,
-        &glutin::WindowedContext,
+        &Window,
         RenderExtras,
     ),
 ) {
@@ -52,20 +54,20 @@ fn render_frame(
     window.swap_buffers().unwrap();
 }
 
-fn get_windowed_context() -> glutin::WindowedContext {
-    let window = glutin::WindowedContext::new_windowed(
-        glutin::WindowBuilder::new()
-            .with_dimensions((SCREEN_SIZE, SCREEN_SIZE).into())
-            .with_title(SCREEN_SIZE.to_string()),
-        glutin::ContextBuilder::new()
-            .with_gl_profile(GlProfile::Core)
-            .with_gl(GlRequest::Specific(Api::OpenGl, (3, 2)))
-            .with_srgb(true),
-        &glutin::EventsLoop::new(),
-    )
-    .unwrap();
-    unsafe { window.make_current() }.unwrap();
-    window
+fn get_windowed_context() -> Window {
+    let glutin_context = glutin::ContextBuilder::new()
+        .with_gl_profile(GlProfile::Core)
+        .with_gl(GlRequest::Specific(Api::OpenGl, (3, 2)))
+        .with_srgb(true)
+        .build_windowed(
+            glutin::WindowBuilder::new()
+                .with_dimensions((SCREEN_SIZE, SCREEN_SIZE).into())
+                .with_title(SCREEN_SIZE.to_string()),
+            &glutin::EventsLoop::new(),
+        )
+        .unwrap();
+
+    unsafe { glutin_context.make_current() }.unwrap()
 }
 
 fn gl_layer_benchmark(c: &mut Criterion) {

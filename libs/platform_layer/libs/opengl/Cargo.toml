@@ -24,12 +24,13 @@ full_rusttype = { version = "0.7.5", features = ["gpu_cache"], package = "rustty
 hashbrown = "0.2"
 twox-hash = "1"
 lazy_static = "1"
-glutin = "0.20"
+glutin = "0.21"
 spin_sleep = "0.3"
 
 [features]
 default = []
 invariant-checking = []
+time-render = ["gl_layer/time-render"]
 
 [dev-dependencies]
 criterion = "0.2"

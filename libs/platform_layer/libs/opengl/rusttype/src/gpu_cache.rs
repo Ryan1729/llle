@@ -755,11 +755,11 @@ impl<'font> Cache<'font> {
                     .insert(glyph_info, (row_top, row.glyphs.len() as u32 - 1));
             }
 
-            if queue_success {
+            if if_changed::dbg!(queue_success) {
                 perf_viz::start_record!("if queue_success");
                 let glyph_count = draw_and_upload.len();
 
-                if self.multithread && dbg!(glyph_count) > 1 {
+                if self.multithread && glyph_count > 1 {
                     perf_viz::record_guard!("multithread rasterization");
                     // multithread rasterization
                     use crossbeam_deque::Steal;

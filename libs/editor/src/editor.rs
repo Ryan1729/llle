@@ -91,9 +91,12 @@ pub fn render_view(state: &State, view: &mut View) {
 
                 if_changed::println!("c.highlight_position: {:?}", c.highlight_position);
 
-                if let Some(h) = c.highlight_position {
-                    if_changed::println!("h: {:?}", h);
-                    highlights.push(Highlight::new((h, position)));
+                match c.highlight_position {
+                    Some(h) if h != position => {
+                        if_changed::println!("h: {:?}", h);
+                        highlights.push(Highlight::new((h, position)));
+                    }
+                    _ => {}
                 }
             }
 
