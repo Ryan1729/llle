@@ -275,8 +275,6 @@ pub fn render(
         highlight_ranges,
     }: RenderExtras,
 ) -> Res<()> {
-    let inner_render_now = std::time::Instant::now();
-
     let query_ids = [0; 1];
     if cfg!(feature = "time-render") {
         // Adding and then retreving this query for how long the gl rendering took,
@@ -389,30 +387,17 @@ pub fn render(
 
     //See comment in above "time-render" check.
     if cfg!(feature = "time-render") {
-        let finish_now = std::time::Instant::now();
         let mut time_elapsed = 0;
         unsafe {
             gl::EndQuery(gl::TIME_ELAPSED);
             gl::GetQueryObjectiv(query_ids[0], gl::QUERY_RESULT, &mut time_elapsed);
             gl::DeleteQueries(1, query_ids.as_ptr() as _);
         }
-        let finish_nanos = finish_now.elapsed().as_nanos();
-        println!("query took {}ms", finish_nanos as f64 / 1_000_000.0);
-        println!("rendering took {}ms", time_elapsed as f64 / 1_000_000.0);
     } else {
-        let flush_now = std::time::Instant::now();
         unsafe {
             gl::Finish();
         }
-        let flush_nanos = flush_now.elapsed().as_nanos();
-        println!("gl::Finish took {}ms", flush_nanos as f64 / 1_000_000.0);
     }
-
-    let inner_render_nanos = inner_render_now.elapsed().as_nanos();
-    println!(
-        "fn render took {}ms",
-        inner_render_nanos as f64 / 1_000_000.0
-    );
 
     Ok(())
 }

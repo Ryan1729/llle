@@ -1,7 +1,6 @@
 # Minimum features to feel like a real (if real-weird) text editor.
 
 ## Standard features
-* Shift and arrow keys to select text
 * Home and End to jump cursors to start and end of line
 * Ctrl-Home and Ctrl-End to jump cursors to start and end of buffer
 * Ctrl, and left and right arrow keys to jump cursor past words

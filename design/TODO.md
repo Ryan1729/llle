@@ -1,9 +1,7 @@
 ## TODO
 
-
-* figure out where the latency when pressing shift is coming from.
-  * print out time it takes on editor thread and on render thread to figure out which needs optimizing.
-  * write perf test that ensures that no `editor` action takes less than x ms?
+* handle line feed characters properly 
+  * this implies disallowing moving the cursor below the line.
 
 * fix cursor being visible through status line (!?)
 

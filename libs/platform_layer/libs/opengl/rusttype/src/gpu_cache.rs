@@ -706,7 +706,6 @@ impl<'font> Cache<'font> {
                             } else {
                                 // signal that a retry is needed
                                 queue_success = false;
-                                println!("{:?}", (glyph, glyph_info));
                                 break 'per_glyph;
                             }
                         }
@@ -755,7 +754,7 @@ impl<'font> Cache<'font> {
                     .insert(glyph_info, (row_top, row.glyphs.len() as u32 - 1));
             }
 
-            if if_changed::dbg!(queue_success) {
+            if queue_success {
                 perf_viz::start_record!("if queue_success");
                 let glyph_count = draw_and_upload.len();
 

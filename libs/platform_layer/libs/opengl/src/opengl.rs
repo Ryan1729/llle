@@ -152,22 +152,16 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
         })
         .expect("Could not start editor thread!");
 
-    let mut called_u_and_r = Vec::with_capacity(32);
-    let mut updated = false;
-
     while running {
         loop_helper.loop_start();
 
         perf_viz::start_record!("while running");
-        let poll_events_now = std::time::Instant::now();
         events.poll_events(|event| {
             perf_viz::record_guard!("events.poll_events");
             use glutin::*;
             if let Event::WindowEvent { event, .. } = event {
-                let now = std::time::Instant::now();
                 macro_rules! call_u_and_r {
                     ($input:expr) => {
-                        called_u_and_r.push(($input, now));
                         let _hope_it_gets_there = in_tx.send($input);
                     };
                 }
@@ -179,17 +173,19 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                     }};
                 }
 
-                match &event {
-                    &WindowEvent::KeyboardInput { ref input, .. } => {
-                        println!(
-                            "{:?}",
-                            (
-                                input.virtual_keycode.unwrap_or(VirtualKeyCode::WebStop),
-                                input.state
-                            )
-                        );
+                if cfg!(feature = "print-raw-input") {
+                    match &event {
+                        &WindowEvent::KeyboardInput { ref input, .. } => {
+                            println!(
+                                "{:?}",
+                                (
+                                    input.virtual_keycode.unwrap_or(VirtualKeyCode::WebStop),
+                                    input.state
+                                )
+                            );
+                        }
+                        _ => {}
                     }
-                    _ => {}
                 }
 
                 use platform_types::Move;
@@ -381,25 +377,16 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
                 }
             }
         });
-        {
-            let t = poll_events_now.elapsed().as_micros();
-            if t >= 1000 {
-                println!("poll {:?}, len {}", t, called_u_and_r.len());
-            }
-        }
 
         if running {
             match out_rx.try_recv() {
                 Ok((v, c)) => {
-                    updated = true;
                     view = v;
                     _cmd = c;
                 }
                 _ => {}
             };
         }
-
-        let render_now = std::time::Instant::now();
 
         let width = dimensions.width as u32;
         let height = dimensions.height as f32;
@@ -417,26 +404,12 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
         }
 
         glutin_context.swap_buffers()?;
-        let render_elapsed = render_now.elapsed().as_micros();
-        if render_elapsed >= 100000 {
-            println!("render_now {:?}", render_elapsed);
-        }
-
-        if updated {
-            let times = called_u_and_r
-                .iter()
-                .map(|(input, instant)| (input, instant.elapsed().as_micros()))
-                .collect::<Vec<_>>();
-            println!("{:?}", times,);
-            called_u_and_r.clear();
-            updated = false;
-        }
 
         if let Some(rate) = loop_helper.report_rate() {
             window.set_title(&format!(
                 "{} {:.0} FPS {:?}",
                 title,
-                if_changed::dbg!(rate),
+                rate,
                 (mouse_x, mouse_y),
             ));
         }
