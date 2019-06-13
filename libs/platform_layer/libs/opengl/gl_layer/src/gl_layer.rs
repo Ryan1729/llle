@@ -275,6 +275,27 @@ pub fn render(
         highlight_ranges,
     }: RenderExtras,
 ) -> Res<()> {
+    let inner_render_now = std::time::Instant::now();
+
+    let query_ids = [0; 1];
+    if cfg!(feature = "time-render") {
+        // Adding and then retreving this query for how long the gl rendering took,
+        // "implicitly flushes the GL pipeline" according to this docs page:
+        // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBeginQuery.xhtml
+        // Without something flushing the queue, as of this writing, the frames do not
+        // appear to render as quickly. That is, after user input the updated frame does
+        // shows up after a noticably longer delay. Oddly enough, `glFinish` produces the
+        // same speed up, and but it takes longer than this query does, (around a ms or so)
+        // at least on my current machine + driver setup. Here's a question abotut this:
+        // https://gamedev.stackexchange.com/q/172737
+        // For the time being, I'm making this feature enabled by default since it is
+        // currently faster, but thi may well not be true any more on a future machine/driver
+        // so  it seems worth it to keep it a feature.
+        unsafe {
+            gl::GenQueries(1, query_ids.as_ptr() as _);
+            gl::BeginQuery(gl::TIME_ELAPSED, query_ids[0])
+        }
+    }
     let dimensions = (width, height);
     let mut brush_action;
     loop {
@@ -365,6 +386,33 @@ pub fn render(
         gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
         gl::DrawArraysInstanced(gl::TRIANGLE_STRIP, 0, 4, *vertex_count as _);
     }
+
+    //See comment in above "time-render" check.
+    if cfg!(feature = "time-render") {
+        let finish_now = std::time::Instant::now();
+        let mut time_elapsed = 0;
+        unsafe {
+            gl::EndQuery(gl::TIME_ELAPSED);
+            gl::GetQueryObjectiv(query_ids[0], gl::QUERY_RESULT, &mut time_elapsed);
+            gl::DeleteQueries(1, query_ids.as_ptr() as _);
+        }
+        let finish_nanos = finish_now.elapsed().as_nanos();
+        println!("query took {}ms", finish_nanos as f64 / 1_000_000.0);
+        println!("rendering took {}ms", time_elapsed as f64 / 1_000_000.0);
+    } else {
+        let flush_now = std::time::Instant::now();
+        unsafe {
+            gl::Finish();
+        }
+        let flush_nanos = flush_now.elapsed().as_nanos();
+        println!("gl::Finish took {}ms", flush_nanos as f64 / 1_000_000.0);
+    }
+
+    let inner_render_nanos = inner_render_now.elapsed().as_nanos();
+    println!(
+        "fn render took {}ms",
+        inner_render_nanos as f64 / 1_000_000.0
+    );
 
     Ok(())
 }

@@ -418,7 +418,7 @@ fn run_inner(update_and_render: UpdateAndRender) -> gl_layer::Res<()> {
 
         glutin_context.swap_buffers()?;
         let render_elapsed = render_now.elapsed().as_micros();
-        if render_elapsed >= 1000 {
+        if render_elapsed >= 100000 {
             println!("render_now {:?}", render_elapsed);
         }
 
